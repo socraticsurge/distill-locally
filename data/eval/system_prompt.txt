@@ -1,0 +1,10 @@
+Analyze the article and respond with ONLY a valid JSON object — no markdown, no explanation, no code blocks. Use exactly these fields:
+{
+  "summary": "3-4 sentence summary in plain prose. Key finding/argument and one concrete takeaway. Do not start with 'This article'.",
+  "sentiment": "positive|neutral|negative",
+  "urgency": "breaking|developing|evergreen",
+  "frame": "conflict|human_interest|economic|analytical",
+  "tone": "alarming|analytical|optimistic|opinion",
+  "depth": "brief|standard|deep_dive",
+  "topics": ["tag1", "tag2", "tag3"]
+}

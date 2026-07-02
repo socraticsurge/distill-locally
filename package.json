@@ -1,0 +1,17 @@
+{
+  "name": "distill-locally",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local knowledge-distillation study: DeepSeek-R1:8b -> Qwen3-0.6B for structured RSS-article summarization, with a pre-registered multi-judge evaluation.",
+  "scripts": {
+    "compile": "JUDGES_EXCLUDE=gpt-oss-120b,llama-3.1-8b node server/eval/compile.mjs",
+    "significance": "node server/eval/paired_bootstrap.mjs",
+    "judge:gemini": "JUDGES_ONLY=gemini node server/eval/compile.mjs",
+    "judge:nemotron": "JUDGES_ONLY=nvidia node server/eval/compile.mjs"
+  },
+  "comment": "Fully self-contained: server/eval (compile.mjs, paired_bootstrap.mjs, score.mjs, gen_arms.mjs) uses only Node built-ins + global fetch. No dependencies to install; reproducing the reported metrics needs no API keys.",
+  "engines": {
+    "node": ">=18"
+  }
+}
