@@ -5,8 +5,8 @@ import os, re, sys
 import markdown, weasyprint
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC  = os.path.join(HERE, "distillation_paper_v4.md")
-OUT  = os.path.join(HERE, "distillation_paper_v4.pdf")
+SRC  = os.path.join(HERE, "distillation_paper.md")
+OUT  = os.path.join(HERE, "distillation_paper.pdf")
 
 md_text = open(SRC).read()
 html = markdown.markdown(md_text, extensions=["tables", "fenced_code", "toc", "sane_lists"])
@@ -19,7 +19,7 @@ if len(parts) == 2:
     html = f'<div class="titleblock">{head}</div><hr />{body}'
 
 # --- tag figure captions (paragraphs starting with <strong>Figure) ---
-html = re.sub(r'<p><strong>(Figure \d+\.)</strong>', r'<p class="caption"><strong>\1</strong>', html)
+html = re.sub(r'<p><strong>(Figure \d+\.|Study at a glance\.)</strong>', r'<p class="caption"><strong>\1</strong>', html)
 # --- tag the abstract paragraph (first <p> after the Abstract heading) ---
 html = re.sub(r'(<h2[^>]*>Abstract</h2>\s*)<p>', r'\1<p class="abstract">', html, count=1)
 

@@ -5,28 +5,32 @@ A local knowledge-distillation study: can an 8B reasoning teacher (`deepseek-r1:
 This repository was extracted from the "Atlas Pulse" RSS reader app so the study can live, version, and be reviewed on its own.
 
 ## Start here
-- **The paper:** [`paper/distillation_paper_v2.md`](paper/distillation_paper_v2.md)
+- **The paper:** [`paper/distillation_paper.md`](paper/distillation_paper.md) — or the rendered arXiv-style [`paper/distillation_paper.pdf`](paper/distillation_paper.pdf) (with figures).
 - **Reviewer's map (every claim → the file that backs it):** [`paper/REVIEW_MANIFEST.md`](paper/REVIEW_MANIFEST.md)
 - **Pre-registration (frozen before scoring):** [`paper/PREREGISTRATION.md`](paper/PREREGISTRATION.md) · full design: [`paper/evaluation_design.md`](paper/evaluation_design.md)
-- v1 effort, superseded but kept for the record: [`paper/distillation_working_paper.md`](paper/distillation_working_paper.md)
 
 ## Headline finding
-On the pre-registered primary comparison, distillation significantly beats the formatting control (+11.6pp checklist pass-rate, p<0.001, every seed) and improves classification. But the per-check breakdown shows the aggregate tie with few-shot prompting is a *trade*: fine-tuning buys concrete takeaways and best-in-class urgency labeling (beating even the teacher) while **regressing on faithfulness** and collapsing on tone-labeling. The actionable conclusion is a **per-field engine assignment**, not a single winner. See the paper §6–§7.
+All numbers are from **full-text judge grading** (the judge sees the whole article). On the pre-registered primary comparison, distillation significantly beats the formatting control (+15.5 pts checklist pass-rate, p<0.001) **and** few-shot prompting (+5.9 pts, p<0.001) on summary quality — closing ~59% of the base→teacher gap. Classification is mixed: distillation **beats the teacher on `urgency`** (78.5 vs 57) and beats both controls on `frame`, but only ties few-shot on the macro (~50% gap-closure) and barely moves `tone`. The one summary soft spot is **faithfulness** (−4 pts vs base), concentrated in short-source articles. The actionable conclusion is a **per-field engine assignment**, not a single winner. See the paper §6–§8.
 
 ## Reproduce the results (offline, no API keys)
-Core analysis uses only Node built-ins — no `npm install` required.
+Core analysis uses only Node built-ins — no `npm install` required. Full-text grading (`ARTICLE_CHARS=100000`) is canonical throughout the paper.
 ```bash
-# Full 2-judge (Gemini + Nemotron) scorecard, recomputed from the judge cache:
-npm run compile            # == JUDGES_EXCLUDE=gpt-oss-120b,llama-3.1-8b node server/eval/compile.mjs
+# Canonical full-text 2-judge (Gemini + Nemotron) scorecard, recomputed from the judge cache:
+ARTICLE_CHARS=100000 JUDGES_EXCLUDE=gpt-oss-120b,llama-3.1-8b node server/eval/compile.mjs
+#   -> data/eval/scores.json  (== data/eval/scores_gemini_nemotron_n93_fullctx.json)
 
-# Pre-registered paired-bootstrap significance test:
-npm run significance       # == node server/eval/paired_bootstrap.mjs
+# Pre-registered paired-bootstrap significance test (on the full-text scorecard):
+node server/eval/paired_bootstrap.mjs data/eval/scores_gemini_nemotron_n93_fullctx.json
 
-# Per-judge robustness (paper §5.5) — each judge alone:
-npm run judge:gemini
-npm run judge:nemotron
+# Per-judge robustness (paper §7) — each judge alone:
+ARTICLE_CHARS=100000 JUDGES_ONLY=gemini node server/eval/compile.mjs
+ARTICLE_CHARS=100000 JUDGES_ONLY=nvidia node server/eval/compile.mjs
+
+# Rebuild the paper's figures and PDF:
+python3 paper/figs.py
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib python3 paper/build_pdf.py
 ```
-`compile.mjs` only reads `data/eval/judge_cache.jsonl`; it never calls an API. **API keys (`.env`) are needed only to *regenerate* the cache** (`server/eval/score.mjs`, `gen_arms.mjs`), which a reviewer does not need to do.
+`compile.mjs` only reads `data/eval/judge_cache.jsonl`; it never calls an API. **API keys (`.env`) are needed only to *regenerate* the cache** (`server/eval/score.mjs`, `gen_arms.mjs`), which a reviewer does not need to do. (The figure/PDF build needs Python with `matplotlib`, `markdown`, and `weasyprint`.)
 
 ## Layout
 ```
