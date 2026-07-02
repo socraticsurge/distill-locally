@@ -138,5 +138,10 @@ def fig5():
     fig.savefig(os.path.join(OUT,"fig5_economics.png")); plt.close(fig)
 
 if __name__=="__main__":
-    fig1(); fig2(); fig3(); fig4(); fig5()
-    print("wrote figs 1-5 to",OUT)
+    # NOTE: the paper's figures (study-at-a-glance, Fig 3 gap-closure, Fig 4 checklist,
+    # Fig 5 efficiency) are AUTHOR-PROVIDED artifacts committed in paper/figures/ and are
+    # NOT regenerated here — do not overwrite them. This script only (re)builds the
+    # optional Figure 1 content-panel mock-up (fig1_panel.png). The fig2/3/4/5 functions
+    # above are retained only as a record of the earlier auto-generated drafts.
+    fig1()
+    print("wrote fig1_panel to", OUT, "(other figures are author-provided)")
