@@ -1,0 +1,11 @@
+# secrets — API keys for judge regeneration (not needed to reproduce metrics)
+.env
+
+# node
+node_modules/
+
+# trained model binaries (~1.5 GB) — regenerate from notebooks/, see README
+models/
+
+# os
+.DS_Store
