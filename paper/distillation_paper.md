@@ -30,7 +30,7 @@ The practical output is therefore **not** "use the small model for everything." 
 
 ## Study at a glance
 
-![](figures/fig2_flow.png)
+![](figures/fig_study_at_a_glance.png)
 
 **Study at a glance.** The full experiment in one diagram: 500 articles are labeled by the teacher, split into train and test, the student is fine-tuned on the training labels, seven arms generate outputs on the held-out test set, each output is scored on three separate sub-tasks by a two-judge panel, and results are reported as gap-closure toward the teacher.
 
@@ -196,7 +196,7 @@ A note on the confidence intervals: the per-article bootstrap captures *article*
 
 Because the goal was teacher quality at student speed, the natural scale is **how far the student traveled from the untuned base (0%) toward the teacher (100%)** on each axis: `(tuned − base) / (teacher − base)`. Figure 3 is the paper in one chart.
 
-![](figures/fig3_gapclosure.png)
+![](figures/fig3_gap_closure.png)
 
 **Figure 3.** Per-axis gap-closure toward the teacher (0 = untuned base, 100 = teacher). Blue = partial recovery; green = beat or overshot the teacher; red = regressed below base. Distillation recovers most summary and classification axes, overshoots two (opening, urgency), and leaves two small summary regressions (faithful, length). urgency beats the teacher outright. The texture — not any single number — is the story.
 
@@ -279,7 +279,7 @@ Two clean results, one caution, and one honest deflation.
 
 We timed every arm on all 93 items (per-item `durationMs` recorded during generation):
 
-![](figures/fig5_economics.png)
+![](figures/fig5_efficiency.png)
 
 **Figure 5.** Left: batch wall-clock vs. volume — the 5.4 h → ~7 min collapse at 500 articles that motivated the work. Right: the quality × cost plane — every 0.6B arm sits at ~0.8 s (the horizontal move is free with size); the vertical axis is where distillation, prompting, and the teacher differ, and where the tuned student beats both non-distillation controls on summary quality.
 
