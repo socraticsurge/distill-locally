@@ -26,11 +26,10 @@ node server/eval/paired_bootstrap.mjs data/eval/scores_gemini_nemotron_n93_fullc
 ARTICLE_CHARS=100000 JUDGES_ONLY=gemini node server/eval/compile.mjs
 ARTICLE_CHARS=100000 JUDGES_ONLY=nvidia node server/eval/compile.mjs
 
-# Rebuild the paper's figures and PDF:
-python3 paper/figs.py
+# Rebuild the paper PDF from the markdown + author-provided figures (paper/figures/):
 DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib python3 paper/build_pdf.py
 ```
-`compile.mjs` only reads `data/eval/judge_cache.jsonl`; it never calls an API. **API keys (`.env`) are needed only to *regenerate* the cache** (`server/eval/score.mjs`, `gen_arms.mjs`), which a reviewer does not need to do. (The figure/PDF build needs Python with `matplotlib`, `markdown`, and `weasyprint`.)
+`compile.mjs` only reads `data/eval/judge_cache.jsonl`; it never calls an API. **API keys (`.env`) are needed only to *regenerate* the cache** (`server/eval/score.mjs`, `gen_arms.mjs`), which a reviewer does not need to do. The paper's figures are author-provided PNGs in `paper/figures/`; the PDF build needs Python with `markdown` and `weasyprint`.
 
 ## Layout
 ```
