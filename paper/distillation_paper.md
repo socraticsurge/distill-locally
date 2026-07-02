@@ -95,7 +95,7 @@ Before the method, what the models actually produce — and what it is for. Atla
 
 ![](figures/fig1_panel.png)
 
-**Figure 1.** The enrichment as the reader sees it — the summary, the five categorical badges (`sentiment`, `urgency`, `frame`, `tone`, `depth`), and the topic tags rendered in the "Content Analysis" panel. A hallucinated *summary* misleads the reader; a mislabelled *badge* is glanceable and cheap — the asymmetry that motivates the per-field split.
+**Figure 1.** The enrichment as the reader sees it — a real Atlas Pulse screenshot. The five categorical fields (`sentiment`, `urgency`, `frame`, `tone`, `depth`) and topic tags render as badges in the "Content Analysis" panel; the free-text summary lives on the adjacent Summary tab. A hallucinated *summary* misleads the reader, whereas a mislabelled *badge* is glanceable and cheap — the asymmetry that motivates the per-field engine assignment.
 
 A representative teacher output for one article:
 
@@ -436,8 +436,8 @@ node server/eval/paired_bootstrap.mjs data/eval/scores_gemini_nemotron_n93_fullc
 ARTICLE_CHARS=100000 JUDGES_ONLY=gemini node server/eval/compile.mjs
 ARTICLE_CHARS=100000 JUDGES_ONLY=nvidia node server/eval/compile.mjs
 
-# Regenerate the figures in this paper:
-python3 paper/figs.py
+# Rebuild this paper PDF (figures are author-provided PNGs in paper/figures/):
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib python3 paper/build_pdf.py
 ```
 
 **Key files.** Test set + teacher gold `data/eval/test.jsonl`; split `data/eval/split.json` (401/93); per-arm outputs `data/eval/arm_*.jsonl` (temperature 0, with measured `durationMs`); generation system prompt `data/eval/system_prompt.txt`; canonical full-text scorecard `data/eval/scores_gemini_nemotron_n93_fullctx.json` (contains `__perCheckByArm`, `__faithfulByLen`, `__disagreeRate`); truncated scorecard (sensitivity) `data/eval/scores_gemini_nemotron_n93.json`; analysis engine `server/eval/compile.mjs`; significance `server/eval/paired_bootstrap.mjs`; judge panel + clients `server/eval/judges.mjs`; design `paper/evaluation_design.md`, `paper/PREREGISTRATION.md`; pipeline diagram `paper/evaluation_pipeline.mmd`; full data map `paper/REVIEW_MANIFEST.md`. Ollama models: `qwen3:0.6b` (base), `rss-tuned-s1/s2/s3` (distilled), `deepseek-r1:8b` (teacher).
