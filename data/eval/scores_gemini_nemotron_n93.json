@@ -975,6 +975,50 @@
         "tone": 75.3,
         "topics_cover": 91.4
       }
+    },
+    "__faithfulByLen": {
+      "teacher": {
+        "short": 81.8,
+        "shortN": 22,
+        "long": 64.8,
+        "longN": 71
+      },
+      "base": {
+        "short": 77.3,
+        "shortN": 22,
+        "long": 40.8,
+        "longN": 71
+      },
+      "fewshot": {
+        "short": 63.6,
+        "shortN": 22,
+        "long": 56.3,
+        "longN": 71
+      },
+      "constrained": {
+        "short": 81.8,
+        "shortN": 22,
+        "long": 42.3,
+        "longN": 71
+      },
+      "tuned_rss_tuned_s1": {
+        "short": 63.6,
+        "shortN": 22,
+        "long": 35.2,
+        "longN": 71
+      },
+      "tuned_rss_tuned_s2": {
+        "short": 50,
+        "shortN": 22,
+        "long": 38,
+        "longN": 71
+      },
+      "tuned_rss_tuned_s3": {
+        "short": 54.5,
+        "shortN": 22,
+        "long": 33.8,
+        "longN": 71
+      }
     }
   },
   "negative_control": {

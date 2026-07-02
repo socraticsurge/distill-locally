@@ -9,3 +9,9 @@ models/
 
 # os
 .DS_Store
+
+# transient full-context re-grade run logs
+data/eval/fullctx*.log
+data/eval/judge_fail.log
+data/eval/scores_fullctx.json
+data/eval/scores_fullctx_class.json
