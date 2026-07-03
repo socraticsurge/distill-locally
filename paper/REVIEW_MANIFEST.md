@@ -45,10 +45,18 @@ Arm record schema: `id, feed, arm, output (JSON string), durationMs, evalCount`.
 | `data/eval/scores_gemini_nemotron_n93_fullctx_8arm.json` | Fresh 8-arm scorecard (drift check vs. the canonical 7-arm file; §6.8 and §7 numbers) |
 | `paper/figures/gen_fig2_fig6.py` | Regenerates Figure 2 (pipeline diagram) and Figure 6 (8-arm checklist) |
 
+### Which scorecard backs which section
+| Sections | Scorecard |
+|---|---|
+| §6.1–§6.7, Figures 3–5 (the pre-specified study) | `data/eval/scores_gemini_nemotron_n93_fullctx.json` (seven-arm canonical) |
+| §6.8, §7 drift check, §8.1 (recomputed), Figure 6 | `data/eval/scores_gemini_nemotron_n93_fullctx_8arm.json` (fresh eight-arm grading) |
+
+The faithfulness adjudication across the two gradings is in paper §6.2.1.
+
 ### Router composite (paper §8.1)
 | File | Role |
 |---|---|
-| `server/eval/router_composite.mjs` | Recomputes §8.1: splices per-item grades from the canonical scorecard into routing-rule composites; paired bootstrap vs. all-tuned |
+| `server/eval/router_composite.mjs` | Recomputes §8.1: splices per-item grades into routing-rule composites; paired bootstrap vs. all-tuned. Default input is the eight-arm scorecard; `SCORES=` selects the seven-arm file for the stability comparison |
 | `data/eval/router_composite.json` | Output of the above — the §8.1 table's numbers |
 
 ### Item-level analyses (paper §6.3 confusion, §6.6 seed signal, §7 decomposition/flips)
