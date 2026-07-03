@@ -9,6 +9,8 @@ A local knowledge-distillation study: can an 8B reasoning teacher (`deepseek-r1:
 
 This repository was extracted from the "Atlas Pulse" RSS reader app so the study can live, version, and be reviewed on its own.
 
+![Study design: 500 articles, teacher labeling, stratified split, two training pipelines, eight arms, three scored sub-tasks, two-judge panel](paper/figures/fig_study_at_a_glance.png)
+
 ## Start here
 - **The paper:** [`paper/distillation_paper.md`](paper/distillation_paper.md) — or the rendered arXiv-style [`paper/distillation_paper.pdf`](paper/distillation_paper.pdf) (with figures).
 - **Reviewer's map (every claim → the file that backs it):** [`paper/REVIEW_MANIFEST.md`](paper/REVIEW_MANIFEST.md)
