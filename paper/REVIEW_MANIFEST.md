@@ -43,6 +43,13 @@ Arm record schema: `id, feed, arm, output (JSON string), durationMs, evalCount`.
 | `server/eval/router_composite.mjs` | Recomputes §8.1: splices per-item grades from the canonical scorecard into routing-rule composites; paired bootstrap vs. all-tuned |
 | `data/eval/router_composite.json` | Output of the above — the §8.1 table's numbers |
 
+### Item-level analyses (paper §6.3 confusion, §6.6 seed signal, §7 decomposition/flips)
+| File | Role |
+|---|---|
+| `server/eval/compile.mjs` with `DETAIL_DUMP=1` | Exports per-item detail (gold labels, per-judge votes, per-check majorities) to `data/eval/detail_dump_<ARTICLE_CHARS>.json`; run once at 100000 and once at 1200 |
+| `server/eval/detail_analyses.mjs` | Recomputes the urgency confusion analysis, seed-agreement confidence signal, judge-disagreement decomposition, truncation flips, verbosity correlation, and sentence-count mechanism; arms discovered dynamically |
+| `data/eval/detail_analyses.json` | Output of the above — the numbers cited in §6.3, §6.6, and §7 |
+
 ### Judge data (the grading)
 | File | Rows | Role |
 |---|---|---|
