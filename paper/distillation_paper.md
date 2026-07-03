@@ -1,6 +1,6 @@
 # Fast and Faithful? Distilling an 8B Reasoning Teacher into a Sub-1B On-Device Student for Structured News Enrichment
 
-*A multi-judge, per-field evaluation of DeepSeek-R1 → Qwen3-0.6B*
+*A pre-specified, per-field quantification of what distillation buys: DeepSeek-R1 → Qwen3-0.6B under a multi-judge, control-anchored evaluation*
 
 **Vinay Kumar Chaganti**  
 Independent researcher · cvk.atreya@gmail.com  
@@ -139,7 +139,7 @@ Temperature 0 everywhere, so the only characterized variance is the tuned model'
 
 ## 5. Evaluation method
 
-The design below (metrics, checklist, controls, split, seeds, primary comparison) was fixed after a 12-article pilot and before any scored run, and not revised after seeing results — so the summary rubric could not be tuned to flatter the outcome. The exact checklist wording and judge prompts are in Appendix A.
+The design below (metrics, checklist, controls, split, seeds, primary comparison) was fixed after a 12-article pilot and before any scored run, and not revised after seeing results — so the summary rubric could not be tuned to the result. The freeze is a self-archived analysis plan recorded in version control (`PREREGISTRATION.md`), not an entry in an external registry such as OSF, so its timestamps are self-attested; deviations from it are disclosed where they occur (§5.2, §10). The exact checklist wording and judge prompts are in Appendix A.
 
 ### 5.1 Metrics per sub-task
 
@@ -360,7 +360,7 @@ I state these plainly; several bound the strength of the headline claims.
 
 - **The reasoning-teacher question is not answered.** I trained on the teacher's final answers only (no chain-of-thought) and did not include an equal-size *non-reasoning* teacher. So I cannot say whether the teacher's reasoning nature contributed anything beyond being a capable 8B model. The title and framing are scoped to "an 8B reasoning teacher," not to "reasoning was necessary." This is the study's most important limitation and its most valuable open question (§11).
 - **Silver, not gold labels.** Classification "accuracy" is against panel *consensus*, not human truth; agreement (0.70–0.91) bounds trust but does not establish correctness. The *urgency* "beats the teacher" result in particular cannot be separated from majority-class/judge-prior alignment without a per-class confusion analysis I have not done (§6.3).
-- **Two-judge panel; magnitudes uncertain; a preregistration deviation.** Directions are robust under each judge; exact percentages are not judge-invariant (§7). The panel was reduced from the preregistered multi-family set to two judges for operational reasons (§5.2), and the two-judge "consensus" has no true majority on the 27% of items where judges disagree (§5.2).
+- **Two-judge panel; magnitudes uncertain; a preregistration deviation.** Directions are robust under each judge; exact percentages are not judge-invariant (§7). The panel was reduced from the preregistered multi-family set to two judges for operational reasons (§5.2), and the two-judge "consensus" has no true majority on the 27% of items where judges disagree (§5.2). Two further deviations moved in the direction of *more* evidence and are disclosed here: the scored N grew from the amendment's pre-committed stratified 40 to the full 93-item test set, and judge context grew from a 1200-character lead to the full article (§5.2, §6.2.1).
 - **Faithfulness is reference-free LLM-judged, not entailment-verified.** Full-text grading removed the truncation artifact, but the metric is still a judge's claim-support call, not a formal NLI check. The negative control validates the gross case, not subtle in-domain fabrication (§5.3). The residual −4 and its short-article concentration should be confirmed with a MiniCheck-class verifier (§11).
 - **The short-article finding rests on a small subgroup** (n = 22, §6.2.1). It is consistent across seeds and robust to the truncation control, but "concentrated in short sources" is as strong as the data support — not "confined to exactly these."
 - **Seed variance is first-order on subjective fields** (§6.6). The per-article bootstrap CIs do not fully propagate it; the reported seed *ranges* are the appropriate uncertainty measure on tone and macro.
