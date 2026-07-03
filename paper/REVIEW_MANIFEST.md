@@ -32,10 +32,18 @@ Paths are relative to the repo root: `/Users/vinaychaganti/Documents/VibeCodedAp
 | `arm_fewshot.jsonl` | 93 | Base + few-shot (control: prompting) |
 | `arm_constrained.jsonl` | 93 | Base + constrained JSON decoding (control: formatting) |
 | `arm_tuned_rss_tuned_s1/s2/s3.jsonl` | 93 each | Distilled student, 3 seeds |
+| `arm_distil.jsonl` | 93 | Platform-distilled student (Amendment 2; Distil Labs, single run) |
 | (teacher arm) | 93 | Read from `test.jsonl` `teacher_output`, not a separate file |
 | `arm_pilot_*.jsonl` | 12 each | Pilot-set generations (used only for the freeze) |
 
 Arm record schema: `id, feed, arm, output (JSON string), durationMs, evalCount`.
+
+### Amendment 2 (paper §6.8)
+| File | Role |
+|---|---|
+| `paper/PREREGISTRATION.md` → Amendment 2 | Frozen before scoring: arm definition, pre-committed primary, drift-check protocol |
+| `data/eval/scores_gemini_nemotron_n93_fullctx_8arm.json` | Fresh 8-arm scorecard (drift check vs. the canonical 7-arm file; §6.8 and §7 numbers) |
+| `paper/figures/gen_fig2_fig6.py` | Regenerates Figure 2 (pipeline diagram) and Figure 6 (8-arm checklist) |
 
 ### Router composite (paper §8.1)
 | File | Role |

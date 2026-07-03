@@ -18,7 +18,7 @@ I separate the single JSON output into its three real sub-tasks — a free-text 
 
 The speed target is met and is a property of model size: every 0.6B arm runs at ~0.8 s/article, collapsing the 5.4 h batch to ~7 minutes at ~11× less RAM and zero cost. The quality target is met substantially but unevenly. Reframing every metric as **gap-closure toward the teacher** (base = 0%, teacher = 100%), distillation closes ~59% of the summary-quality gap and ~50% of the classification gap. On the aggregate summary checklist the tuned student significantly beats both non-distillation controls — constrained decoding (+15.5 pts, p < 0.001) and few-shot prompting (+5.9 pts, p < 0.001) — so the summary gain is distillation-specific, not merely formatting or in-context imitation. Classification is more mixed: on *urgency* the tuned student tops every arm including the teacher in judge agreement (78% vs 57%) — though a per-class analysis attributes most of that margin to majority-class alignment (+4.3 points over always guessing the dominant label, §6.3) — and it beats both controls on *frame*, but on the classification macro it only ties few-shot (56.0 vs 57.8) and barely moves *tone* labeling (29% vs few-shot's 79%). The one summary soft spot is faithfulness: the tuned student sits ~4 points below the untuned base (75.6% vs 79.6%; teacher 93.5%), and that gap is concentrated in short-source articles (−21 pts on articles ≤ 1200 chars; level with base on longer ones) — a thin-source fabrication tendency, not general hallucination.
 
-The actionable result is a **per-field engine assignment**: the distilled student is the best on-device choice for structure, for *urgency* / *frame*, and for summaries of substantial articles; prompting wins *tone*; and faithfulness-critical prose on thin sources should fall back to prompting or the teacher. I also report material seed variance (tone-labeling ranged 8.6–46.2% across three training seeds) that a single run could not have surfaced.
+The actionable result is a **per-field engine assignment**: the distilled student is the best on-device choice for structure, for *urgency* / *frame*, and for summaries of substantial articles; prompting wins *tone*; and faithfulness-critical prose on thin sources should fall back to prompting or the teacher. I also report material seed variance (tone-labeling ranged 8.6–46.2% across three training seeds) that a single run could not have surfaced. A pre-specified amendment adds a **managed-platform arm** (Distil Labs; its own 120B teacher and synthetic-data expansion): it ties the DIY recipe on summary quality (Δ−3.6, CI spanning zero) while producing the best small-model classifier and the worst thin-source faithfulness — the two training pipelines transfer different capabilities (§6.8).
 
 ---
 
@@ -39,7 +39,7 @@ So the real question is not "is the small model faster" (trivially yes) nor "was
 
 > **How much of an 8B teacher's output quality can a 600M student recover through distillation — on each part of a structured task — and does it preserve the properties (faithfulness above all) that a reader-facing product cannot compromise?**
 
-An earlier internal pass answered a cruder version ("distillation matched or exceeded the teacher") with a method that could not support it: a single same-generation judge, N = 20, a 0–5 rubric that saturated at 4.95 on faithfulness, and one training run. This paper re-runs the question with a design that closes each of those gaps: 93 test articles, seven arms including two non-distillation controls, a decomposition into three sub-tasks, a multi-family judge panel validated by a negative control, three training seeds, and paired-bootstrap significance tests. The checklist and primary comparison were **fixed after a pilot and before scoring** (`evaluation_design.md`, `PREREGISTRATION.md`), so the summary rubric could not be tuned to the result.
+An earlier internal pass answered a cruder version ("distillation matched or exceeded the teacher") with a method that could not support it: a single same-generation judge, N = 20, a 0–5 rubric that saturated at 4.95 on faithfulness, and one training run. This paper re-runs the question with a design that closes each of those gaps: 93 test articles, eight arms including two non-distillation controls and an amendment-added managed-platform pipeline (§6.8), a decomposition into three sub-tasks, a multi-family judge panel validated by a negative control, three training seeds, and paired-bootstrap significance tests. The checklist and primary comparison were **fixed after a pilot and before scoring** (`evaluation_design.md`, `PREREGISTRATION.md`), so the summary rubric could not be tuned to the result.
 
 ### 1.1 Contributions
 
@@ -106,7 +106,7 @@ The asymmetry in the last column is the reason the study's conclusion is a **per
 
 ![](figures/fig_study_at_a_glance.png)
 
-**Figure 2.** Overview of the experimental pipeline. 500 articles are labeled by the teacher and split 401/93; the student is fine-tuned on the training labels (three seeds); seven arms generate outputs on the held-out test set; each output is scored on three sub-tasks by a two-judge panel; results are reported as gap-closure toward the teacher.
+**Figure 2.** Overview of the experimental pipeline. 500 articles are labeled by the teacher and split 401/93; the training labels feed two pipelines — the DIY QLoRA fine-tune (three seeds) and, added by Amendment 2, a managed-platform distillation (Distil Labs; its own teacher and synthetic-data expansion; dashed) — and eight arms generate outputs on the held-out test set; each output is scored on three sub-tasks by a two-judge panel; results are reported as gap-closure toward the teacher.
 
 ### 4.1 Models
 
@@ -125,7 +125,7 @@ A ~13× parameter gap and a difference in kind: DeepSeek-R1 emits chain-of-thoug
 
 QLoRA fine-tune of Qwen3-0.6B directly on the 401 teacher outputs via Unsloth (LoRA rank 32, response-only loss masking, Qwen3 "thinking" disabled), on a free Colab T4. **Three seeds** (42 / 123 / 7) → `rss-tuned-s1/s2/s3`, so seed variance is *characterized* rather than assumed away. Exported to q4_k_m GGUF, served locally in Ollama.
 
-### 4.4 The seven arms (all generated at temperature 0 / greedy)
+### 4.4 The arms (all generated at temperature 0 / greedy)
 
 | Arm | Role |
 |---|---|
@@ -134,8 +134,9 @@ QLoRA fine-tune of Qwen3-0.6B directly on the 401 teacher outputs via Unsloth (L
 | **Base + few-shot** (2–3 in-context examples) | control: is the win just prompting? |
 | **Base + constrained decoding** (JSON-schema-forced) | control: is the win just formatting? |
 | **Tuned × 3 seeds** | the distillation method |
+| **Platform-distilled × 1** | Amendment 2: Distil Labs managed pipeline from the same 401-item upload — its own teacher (`openai.gpt-oss-120b`), synthetic-data expansion, single run; a system-vs-system arm (§6.8) |
 
-Temperature 0 everywhere, so the only characterized variance is the tuned model's three training seeds — exactly what the confidence intervals capture. Distillation is credited only where it beats **both** controls on something real. All arms see the full article at generation time.
+Temperature 0 everywhere, so the only characterized variance is the tuned model's three training seeds (the amendment arm is a single run, disclosed in §6.8) — exactly what the confidence intervals capture. Distillation is credited only where it beats **both** controls on something real. All arms see the full article at generation time.
 
 ## 5. Evaluation method
 
@@ -308,9 +309,41 @@ The tuned summary is faithful, correctly structured, and captures the article's 
 
 This is the residual faithfulness gap (§6.2.1) in a single instance — a genuine fabrication, not merely something absent from a truncated lead, and exactly the thin-source failure mode §6.2.1 isolates statistically. Against the bar a reader-facing summary demands, this is the failure that makes the routing table (§8) fall back to a more careful engine for faithfulness-critical prose — not because distillation "failed" (it recovered 59% of the summary gap and beat both controls), but because this product's tolerance for invented content is near zero.
 
+### 6.8 The platform-distilled arm (Amendment 2): two pipelines transfer different capabilities
+
+After the seven-arm study concluded, Amendment 2 (frozen before scoring, `PREREGISTRATION.md`) added a **managed-platform arm**: the same 401 training articles uploaded to Distil Labs, whose pipeline runs its own teacher (`openai.gpt-oss-120b`), expands the data synthetically (teacher temperature 0.6), and fine-tunes the same Qwen3-0.6B base in a single run (pipeline wall-clock 14 h 21 m, hands-off). The arm was generated exactly like its siblings — temperature 0, full articles, q4_k_m via Ollama, per-item latency recorded — under the platform's system prompt (a near-copy of the study's own). This is a **system-vs-system comparison**: teacher, data recipe, and seed count all differ at once, by design.
+
+Adding an arm changes every batched judge prompt, so all arms were re-graded live; the drift check is reported in §7. All numbers in this subsection are from that fresh grading (aggregate deltas for the original arms ≤ 1.6 points).
+
+![](figures/fig6_platform_checklist.png)
+
+**Figure 6.** Summary checklist pass-rate under the fresh 8-arm grading (mean ± bootstrap 95% CI; DIY tuned shown as 3-seed mean with seed range). The pre-committed primary comparison — platform-distilled vs. DIY tuned mean, paired bootstrap — is a statistical tie: **Δ−3.6 [−8.5, +1.1]**.
+
+| Arm (fresh grading) | Checklist | Faithful | Faithful, short (n=22) | Cls. macro | Schema | p50 latency |
+|---|---|---|---|---|---|---|
+| Teacher | 84.0 | 93.5 | 81.8 | 67.3 | 100 | ~39,200 ms |
+| DIY tuned (3-seed mean) | 71.6 | 72.7 | 53.0 | 56.0 | 100 | 774 ms |
+| **Platform-distilled** | **68.0** | **64.5** | **36.4** | **64.3** | 98.9 | 929 ms |
+| Base + few-shot | 66.8 | 83.9 | 68.2 | 57.8 | — | 856 ms |
+| Base zero-shot | 55.1 | 74.2 | 72.7 | 44.7* | — | 845 ms |
+
+*\*canonical value; classification gold is unchanged by the re-grade.*
+
+**The pre-committed primary is a tie with a DIY-leaning point estimate.** Platform vs. DIY tuned mean on the checklist: Δ−3.6, paired bootstrap [−8.5, +1.1]; platform vs. few-shot: Δ+1.2 [−4.0, +6.3]. A managed pipeline with a 120B teacher and synthetic data expansion did not beat a free-Colab QLoRA on the teacher's raw outputs, on summary quality.
+
+**The texture is the finding: the two recipes transferred different capabilities.**
+
+- **Direct distillation transferred the teacher's writing.** The DIY arms hold the best small-model summaries (71.6) — and the majority-collapsed labels documented in §6.3.
+- **Synthetic expansion transferred label diversity.** The platform arm posts the **best small-model classification macro (64.3)** with genuinely balanced per-class behavior: its urgency confusion is what the DIY arm's headline number pretended to be (*developing* recall 78% vs. the DIY arms' 28%, *evergreen* 75%), and its **depth accuracy (62.0) is the first of any arm — including the teacher — to clear the majority-class line (~56)**. Tone reaches 56.5 (DIY: 29; few-shot still wins at 79.1).
+- **The cost is grounding.** The platform arm's faithfulness (64.5 overall) is the lowest measured, and on short articles it collapses to **36.4%** — the worst thin-source fabrication in the study, roughly 17 points below the DIY arms on the same subgroup. The synthetic-expansion pipeline appears to amplify exactly the failure mode §6.2.1 isolated. Two cosmetic defects: one non-parsing output (schema 98.9%) and one out-of-vocabulary label (*"opinionable"*).
+
+**Deployment and ledger implications.** The routing table (§8) gains a genuine option: the platform arm as the on-device engine for *depth* (the only arm above the constant guess) and as the balanced-recall alternative for *urgency*, at the price of a third engine in production. The build-vs-buy row of §9.1 gets its numbers: DIY — ~$0, three seeds, a free Colab T4, and the practitioner's attention; platform — one hands-off 14.5-hour run and platform credits; summary quality a statistical tie, per-field strengths complementary. The general lesson mirrors the paper's thesis one level up: **training pipelines, like engines, should be chosen per field — the data recipe (raw teacher outputs vs. synthetic expansion) is itself a per-field decision.**
+
 ## 7. Robustness across judges
 
 Inter-judge disagreement is 26.8% per check, so **magnitudes are judge-dependent**. But every *directional* finding in §6 holds under **each judge independently**: both judges rank tuned > constrained and tuned > few-shot on the summary checklist, both put *urgency*-tuned above the teacher, and both rank *tone*-label few-shot ≫ tuned. I therefore make only directional claims and explicitly do **not** claim the exact percentages are judge-invariant. A third same-family judge was not added because it cannot change a direction the two judges already agree on — only human gold labels can settle the magnitudes (§10, §11). The negative control (0% faithful on mismatch, §5.3) confirms the grader measures article-grounded faithfulness rather than surface plausibility, within the limits noted in §5.3.
+
+**The Amendment 2 drift check: aggregates reproduce; *faithful* shows packaging sensitivity.** Re-grading all arms inside the new 8-candidate prompts (§6.8) reproduced every original arm's checklist aggregate within 1.6 points — the study's conclusions are robust to a full re-grade. The *faithful* check, however, moved −5.4 to −7.5 points on three arms (base, constrained, tuned-s2) while remaining exactly unchanged on the others. The cause is not temporal drift: adding a candidate reshuffles the blinded label order in every prompt, so faithful verdicts carry roughly ±5–7 points of **prompt-composition sensitivity** for some arms. Under the fresh grading the §6.2.1 faithfulness gap (tuned vs. base) reads −1.5 rather than −4.0 — same direction, softer magnitude — which is precisely why this paper makes direction-only claims on judge-graded magnitudes.
 
 **Where the disagreement lives.** Decomposing the 26.8% per-check disagreement by check (`server/eval/detail_analyses.mjs`) is reassuring in exactly the right place: *faithful* has the lowest inter-judge disagreement of all eight checks (13.7%) and *thesis* the second lowest (14.4%) — the product-critical checks are the panel's most reliable. Disagreement concentrates in the persona and style checks (*teacher-lens* 36.6%, *tone* 28.6%) and, strikingly, in two checks that are mechanically verifiable: *length* (30.6%) and *opening* (26.3%). Judges disagree roughly 30% of the time on counting sentences and checking a two-word prefix — a measured noise floor for LLM judging of even trivial predicates, and retroactive confirmation of §5.1's note that rule-checkable predicates should be computed by rule. Relatedly, summary length correlates mildly positively with checklist pass-rate within every arm (Spearman +0.09 to +0.40; partly mechanical via the *length* check) — but any verbosity bias runs *against* this study's conclusion, since the winning arm writes the shortest outputs (§6.5): the tuned student's checklist wins are, if anything, understated.
 
@@ -329,10 +362,10 @@ The shippable recommendation for Atlas Pulse — and the transferable idea — i
 | Field / output | Best on-device engine | Why |
 |---|---|---|
 | JSON structure | constrained decoding (any 0.6B) | free; no training needed |
-| **urgency** | **distilled student** | best judge agreement of any arm (largely majority-class alignment, §6.3); prompting hurts it |
+| **urgency** | **distilled student** (agreement) or **platform-distilled** (balanced recalls, §6.8) | DIY has the best judge agreement (largely majority-class, §6.3); the platform arm discriminates *developing* far better (78% vs 28% recall) at lower agreement |
 | **frame** | **distilled student** | beats both controls |
 | sentiment, topics | distilled student or few-shot | roughly tied; either works, sub-second |
-| depth | *neither trusted* | no arm beats majority-class; treat as low-confidence |
+| depth | **platform-distilled student** (§6.8) | the only arm above the majority-class line (62.0 vs ~56); every original arm fails it |
 | **tone** label | **few-shot base** | prompting far better than distillation here |
 | summary — long/rich articles | **distilled student** | 59% gap closed; faithfulness level with base |
 | summary — short/thin articles | **teacher** (if the latency budget allows) | tuned student's fabrication risk concentrates here (§6.2.1); scoring the assembled system shows the few-shot fallback recovers almost nothing — see §8.1 |
@@ -391,6 +424,7 @@ The findings above came from a chain of build decisions that any team distilling
 | Judges | Two model families that completed reliably; full-source grading | Free-tier hosted judges fail mid-run; grade against the full source or a truncation artifact will masquerade as a model regression (§7) |
 | Reporting scale | Gap-closure toward the teacher, with absolute deltas alongside | Matches the deployment question directly; watch small denominators (§6.1) |
 | Ship decision | Per-field routing table (§8) | The right unit of deployment is the field, not the model |
+| Build vs. buy | Both run: DIY QLoRA (free Colab, 3 seeds, hands-on) and a managed platform (Distil Labs, one 14.5 h hands-off run) | Statistical tie on the summary primary (Δ−3.6 [−8.5, +1.1]); the recipes transfer different capabilities — raw teacher outputs → writing style, synthetic expansion → label diversity (§6.8). Choose per target field |
 
 ## 10. Limitations
 
@@ -422,6 +456,8 @@ These are the openings the study identified, ordered by expected value.
 I set out to quantify what distillation buys when a structured-output pipeline moves from an 8B teacher to a sub-1B on-device student, with a shipped reader's enrichment batch as the test bed. On a commodity MacBook, a distilled 600M Qwen3-0.6B student runs the 500-article enrichment in **~7 minutes instead of 5.4 hours**, and recovers **most of the teacher's summary quality (59% of the gap)** and **half of the classification gap (50%)** — topping every arm, including the teacher, on *urgency* judge-agreement (a margin the §6.3 confusion analysis shows is largely majority-class alignment), and beating both non-distillation controls on summary quality. The recovery is uneven in ways that matter: on classification the aggregate only ties few-shot prompting (the win is field-specific — *urgency*, *frame*), *depth* is untrustworthy for every small-model arm, and on summaries the student transferred the teacher's style and specificity slightly faster than its faithfulness, leaving it ~4 points below the untuned base — a gap that, on inspection, is confined to short-source articles.
 
 The resulting verdict is therefore **not** "distillation works" or "distillation hallucinates" but a **per-field, per-context engine assignment**: ship the distilled student for structure, for *urgency* / *frame*, and for summaries of substantive articles; use prompting for *tone*; and fall back to prompting or the teacher for faithfulness-critical prose on thin sources.
+
+A post-publication amendment sharpened the picture from a second direction: the same training data pushed through a managed distillation platform (different teacher, synthetic expansion) tied the DIY recipe on summary quality while inverting its classification profile — balanced, majority-beating labels but the worst thin-source grounding (§6.8). Even the choice of training pipeline turns out to be a per-field decision.
 
 Three lessons generalize:
 
