@@ -1,5 +1,10 @@
 # Distill Locally — DeepSeek-R1:8b → Qwen3-0.6B
 
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![Pre-registered](https://img.shields.io/badge/design-pre--registered-1a3c6e)
+![Reproducible](https://img.shields.io/badge/reproduces-offline%2C%20no%20API%20keys-1a3c6e)
+![Local](https://img.shields.io/badge/stack-Ollama%20%2B%20Unsloth-8A2BE2)
+
 A local knowledge-distillation study: can an 8B reasoning teacher (`deepseek-r1:8b`) be distilled into a 600M student (`Qwen3-0.6B`) for a structured RSS-article-summarization task — a JSON object with a free-text summary, five categorical fields, and open-set topics — and *what specifically* does the distillation buy? Evaluated with a pre-registered, control-anchored, multi-judge protocol.
 
 This repository was extracted from the "Atlas Pulse" RSS reader app so the study can live, version, and be reviewed on its own.
@@ -8,6 +13,8 @@ This repository was extracted from the "Atlas Pulse" RSS reader app so the study
 - **The paper:** [`paper/distillation_paper.md`](paper/distillation_paper.md) — or the rendered arXiv-style [`paper/distillation_paper.pdf`](paper/distillation_paper.pdf) (with figures).
 - **Reviewer's map (every claim → the file that backs it):** [`paper/REVIEW_MANIFEST.md`](paper/REVIEW_MANIFEST.md)
 - **Pre-registration (frozen before scoring):** [`paper/PREREGISTRATION.md`](paper/PREREGISTRATION.md) · full design: [`paper/evaluation_design.md`](paper/evaluation_design.md)
+- **Practitioner lessons (the decision surface — teacher/student choice, quantization, tuning recipe, data size, controls, judging):** paper §9.1.
+- **Citing this work:** see [`CITATION.cff`](CITATION.cff).
 
 ## Headline finding
 All numbers are from **full-text judge grading** (the judge sees the whole article). On the pre-registered primary comparison, distillation significantly beats the formatting control (+15.5 pts checklist pass-rate, p<0.001) **and** few-shot prompting (+5.9 pts, p<0.001) on summary quality — closing ~59% of the base→teacher gap. Classification is mixed: distillation **beats the teacher on `urgency`** (78.5 vs 57) and beats both controls on `frame`, but only ties few-shot on the macro (~50% gap-closure) and barely moves `tone`. The one summary soft spot is **faithfulness** (−4 pts vs base), concentrated in short-source articles. The actionable conclusion is a **per-field engine assignment**, not a single winner. See the paper §6–§8.
