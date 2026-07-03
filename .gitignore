@@ -15,3 +15,6 @@ data/eval/fullctx*.log
 data/eval/judge_fail.log
 data/eval/scores_fullctx.json
 data/eval/scores_fullctx_class.json
+
+# regenerable per-item detail dumps (see REVIEW_MANIFEST)
+data/eval/detail_dump_*.json
