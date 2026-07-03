@@ -45,3 +45,13 @@ Plus **topics_cover** (do the listed topics capture the article's main themes).
 ## Notes
 - Pairwise win-rate runs on a separate day / Groq-only (Gemini daily budget).
 - Pilot diagnostics that informed this freeze are in `data/eval/pilot_score.log` / `scores.json`.
+
+## Amendment 2 — 2026-07-04 (one additional arm; frozen before scoring)
+
+Committed before any new-arm grading. Approved by the author.
+
+- **New arm — platform-distilled** (`arm_distil.jsonl`): Qwen3-0.6B trained by the Distil Labs managed pipeline from the byte-identical 401-item train upload (overlap-checked against the 93-item test set: zero leakage; the test set was uploaded only for the platform's internal evaluation — training and synthetic generation use the train file only, per platform design). Disclosed differences from the DIY tuned arms: platform teacher is `openai.gpt-oss-120b` (not `deepseek-r1:8b`), training data is a platform-generated synthetic expansion (teacher temperature 0.6), single training run (no seeds), and the model is queried under the platform's system prompt (a near-copy of the study's own). This is a **system-vs-system comparison** (managed pipeline with its defaults vs. this paper's DIY recipe), not an ablation of any single factor.
+- **Generation:** temperature 0, full articles, q4_k_m GGUF served via Ollama (parity with all student arms), per-item `durationMs` recorded.
+- **Pre-committed primary comparison:** platform-distilled vs. DIY tuned (3-seed mean) on summary checklist pass-rate, paired bootstrap, N = 93. Secondary (directional): per-field classification including confusion rows, faithfulness by article length, structure validity, latency.
+- **Judge-drift check:** adding an arm changes the batched checklist prompts, so all existing arms are re-graded live by the same two judges (Gemini Flash Lite, Nemotron-550B, full-text context). Fresh-vs-cached score deltas for the existing arms will be reported before any new-arm number is interpreted.
+- A considered-and-dropped arm is recorded for completeness: the June v1 pilot checkpoint (130 examples) was rejected as a data-size point because its recipe and prompt differ from the current arms — any delta would be confounded.
