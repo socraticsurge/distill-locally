@@ -12,7 +12,7 @@ July 2026 · Preprint
 
 ## Abstract
 
-The goal was concrete: an RSS reader that enriches each article with a structured JSON summary, run as a local batch job, at the output quality of an 8B reasoning model (`deepseek-r1:8b`) but without its ~39 s/article latency (a 500-article backlog took 5.4 hours). We fine-tune a 600M-parameter Qwen3-0.6B student on the teacher's outputs (QLoRA, 3 seeds) and ask not "does distillation work" but the question the goal poses: **how much of the teacher's quality did the small student recover, on which parts of the task, and at what cost to the properties a news product cannot compromise?**
+What does knowledge distillation actually buy a production pipeline — measured per sub-task, against the cheaper levers a practitioner would try first, at claims the evidence can support? We quantify this on a real, shipped deployment: an RSS reader that enriches each article with a structured JSON summary, run as a local batch job, at the output quality of an 8B reasoning model (`deepseek-r1:8b`) but without its ~39 s/article latency (a 500-article backlog took 5.4 hours). We fine-tune a 600M-parameter Qwen3-0.6B student on the teacher's outputs (QLoRA, 3 seeds) and ask not "does distillation work" but the question the goal poses: **how much of the teacher's quality did the small student recover, on which parts of the task, and at what cost to the properties a news product cannot compromise?**
 
 We separate the single JSON output into its three real sub-tasks — a free-text summary, five categorical labels, and open-set topics — and score each against two non-distillation controls (few-shot prompting; constrained JSON decoding), with a blinded, reference-free, multi-family LLM-judge panel that grades against the *full* article and is validated by a negative control (0% faithful on mismatched articles, n = 30). Latency is measured per-arm on the test set.
 
@@ -24,7 +24,11 @@ The actionable result is a **per-field engine assignment**: the distilled studen
 
 ## 1. Introduction
 
-This study began as an engineering problem, not an evaluation. **Atlas Pulse** — a local-first RSS reader — enriches every incoming article with a structured JSON object: a short analytical summary plus categorical fields (*sentiment, urgency, framing, tone, depth*) and topic tags. Generating that with the `deepseek-r1:8b` teacher produced output we were happy with, but at ~39 s/article; enriching a 500-article backlog was a 5.4-hour job on a consumer MacBook (Figure 5, left). The goal was to keep that output quality while making the batch fast enough to run locally as a routine, unattended batch job.
+This study began as a quantification problem: before adopting distillation across a family of production tasks, we wanted a defensible measurement of what it actually buys — per sub-task, against the cheaper levers a practitioner would try first. The task pattern under study — one prompt, one schema-bound JSON object per item, repeated over thousands of items — recurs across production pipelines (ticket triage, log classification, document intake, catalog extraction), so the lessons were expected to outlive the first application.
+
+That first application is real and shipped. **Atlas Pulse** — a local-first RSS reader — enriches every incoming article with a structured JSON object: a short analytical summary plus categorical fields (*sentiment, urgency, framing, tone, depth*) and topic tags. Generating that with the `deepseek-r1:8b` teacher produced output we were happy with, but at ~39 s/article; enriching a 500-article backlog was a 5.4-hour job on a consumer MacBook (Figure 5, left). The engineering goal was to keep that output quality while making the batch fast enough to run locally as a routine, unattended job.
+
+Running the study fully locally was itself a measurement decision, not only a deployment constraint. Free-tier hosted APIs proved too unreliable for controlled quantification — rate limits and dropped completions later forced even the judge panel down to the two providers that ran cleanly (§5.2) — whereas local models hold still: fixed weights, temperature 0, no quotas, unlimited reruns. Everything needed to re-measure is therefore local and free.
 
 Two levers were available, and it is worth being precise about which does what, because the two are easy to conflate.
 
@@ -39,11 +43,11 @@ An earlier internal pass answered a cruder version ("distillation matched or exc
 
 ### 1.1 Contributions
 
-1. **A per-sub-task decomposition** of a single structured-output distillation, separating free-text summarization, categorical classification, and open-set topic tagging — which reveals effects (an *urgency* overshoot, a localized faithfulness regression, a *tone*-labeling failure) that any aggregate score hides.
+1. **A fully-local, reference-free, human-free evaluation harness** for structured-output distillation — negative-control grader validation, direction-only multi-judge reporting, reproducible offline from a cached judge log — built so the measurement itself repeats across the future use cases the task pattern implies.
 2. **Gap-closure-to-teacher as a reporting scale** matched to the actual engineering goal (teacher quality at student speed), which naturally exposes both overshoot and regression.
-3. **Two non-distillation controls** (few-shot prompting; constrained decoding) so distillation is credited only for what neither cheaper lever provides — the tuned student significantly beats both on summary quality.
-4. **A fully-local, reference-free, human-free evaluation harness** with negative-control grader validation and direction-only multi-judge reporting, reproducible offline from a cached judge log.
-5. **A practitioner-facing per-field engine-assignment recommendation** for on-device structured enrichment, with a stated (untested) transfer hypothesis to related high-volume, schema-bound pipelines.
+3. **A per-sub-task decomposition** of a single structured-output distillation, separating free-text summarization, categorical classification, and open-set topic tagging — which reveals effects (an *urgency* overshoot, a localized faithfulness regression, a *tone*-labeling failure) that any aggregate score hides.
+4. **Two non-distillation controls** (few-shot prompting; constrained decoding) so distillation is credited only for what neither cheaper lever provides — the tuned student significantly beats both on summary quality.
+5. **A practitioner-facing result**: a per-field engine assignment for on-device structured enrichment, and an explicit map of the build decisions the exercise required — teacher and student choice, quantization, tuning recipe, data size, task decomposition, controls, judging (§9.1).
 
 **What this paper does *not* claim** (stated once, up front, and revisited in §10): it does not establish that the teacher's *reasoning* nature was necessary; it does not use human gold labels; it uses a two-judge panel, so exact magnitudes are not judge-invariant; and its classification "accuracy" is measured against a judge-panel consensus, not ground truth.
 
@@ -321,7 +325,7 @@ The shippable recommendation for Atlas Pulse — and the transferable idea — i
 
 The answer to "was there a realistic application?": **yes** — as the on-device engine for structure, for *urgency* / *frame*, and for summaries of substantive articles, reserving prompting for *tone* and reserving prompting or the teacher for faithfulness-critical prose on thin sources. The distilled 0.6B student is the best available on-device engine for a *meaningful slice* of the enrichment layer; it is not a single drop-in winner, and saying which slice is the contribution.
 
-**A transfer hypothesis, offered as such (not a measured result).** The 5.4 h → ~7 min collapse is the signature of any high-volume, schema-bound, latency-sensitive enrichment pipeline currently paying mid/large-model latency per item. The per-field discipline *plausibly* generalizes to support/ticket triage (priority + category, the direct analogue of urgency + frame), log/alert classification, document/email intake, moderation pre-filters, and catalog attribute extraction. In each, the pattern would be: distill the small model for the structured, high-frequency labels; keep the large model for the low-frequency, high-stakes free text; and *measure per field* rather than assuming the small model wins everything. We measured exactly one task family (§10) — these are directions to test, not claims we have verified.
+**The intended reuse (measured on one task family so far).** Repeatability was a design input, not an afterthought: the task pattern was chosen because it recurs. The 5.4 h → ~7 min collapse is the signature of any high-volume, schema-bound, latency-sensitive enrichment pipeline currently paying mid/large-model latency per item — support/ticket triage (priority + category, the direct analogue of *urgency* + *frame*), log/alert classification, document/email intake, moderation pre-filters, catalog attribute extraction. For each, the recipe this study argues for is the same: distill the small model for the structured, high-frequency labels; keep the large model for the low-frequency, high-stakes free text; and *measure per field* with the harness above rather than assuming the small model wins everything. We have measured exactly one task family (§10); the harness, not this routing table, is the artifact built to transfer.
 
 ## 9. Methods contribution
 
@@ -332,6 +336,23 @@ Beyond the specific routing table, the study contributes a **decomposed, referen
 3. **Two non-distillation controls** (prompting, formatting) so "distillation" is credited only for what neither cheaper lever provides.
 4. **A demonstration that reference-free faithfulness judging must use the full source** — a lead-only pass produced a −9 pt gap that full-context grading shrank to −4 and localized. This is the single most transferable warning in the paper for anyone building LLM-judge faithfulness evals, and the one we would most encourage others to reuse.
 5. **Human-free grader validation** (negative control) and direction-only multi-judge reporting, so the conclusions are reproducible offline from the judge cache with no API keys and no annotator.
+
+### 9.1 The decision surface, as practitioner guidance
+
+The findings above came from a chain of build decisions that any team distilling for a production task must cross. Recording them — the choice made here, and what the study taught about it — is much of the exercise's transferable value.
+
+| Decision | This study's choice | What the study taught |
+|---|---|---|
+| Teacher | `deepseek-r1:8b` — the best structured-output model that ran reliably on the target hardware | Output you would ship is the bar; whether its *reasoning* nature mattered is unresolved (§10) — do not pay for reasoning on faith |
+| Student size | Qwen3-0.6B, the smallest open-weights instruct model in the family | Viable for style, structure, and some labels — but seed variance is first-order at this scale (§6.6): budget ≥3 seeds before believing any subjective-field number |
+| Quantization | q4_k_m at *both* ends (teacher generation and student serving) | Measure at the quantization you will ship; an fp16 evaluation of a q4 deployment measures the wrong model |
+| Tuning recipe | QLoRA rank 32 via Unsloth, response-only loss, thinking disabled, free Colab T4 | The cheapest available recipe moved summary quality decisively (+15.5 over the formatting control); recipe cost was not the bottleneck — evaluation rigor was |
+| Training-set size | 401 teacher-labeled items | Enough for style and structure transfer; not enough to fix imbalanced subjective labels (*tone*, *depth*) — class balance, not raw count, was the binding constraint |
+| Task framing | One JSON output decomposed into three scored sub-tasks | The single most consequential evaluation decision: every real finding in §6 is invisible in the aggregate |
+| Controls | Few-shot prompting; constrained decoding | Nearly free to run, and they changed the conclusion twice: structure needs no training at all, and *tone* belongs to prompting |
+| Judges | Two model families that completed reliably; full-source grading | Free-tier hosted judges fail mid-run; grade against the full source or a truncation artifact will masquerade as a model regression (§7) |
+| Reporting scale | Gap-closure toward the teacher, with absolute deltas alongside | Matches the deployment question directly; watch small denominators (§6.1) |
+| Ship decision | Per-field routing table (§8) | The right unit of deployment is the field, not the model |
 
 ## 10. Limitations
 
@@ -360,7 +381,7 @@ These are the openings the study identified, ordered by expected value.
 
 ## 12. Conclusion
 
-We set out to make a slow, local, reasoning-model batch job fast without giving up its output quality. On a commodity MacBook, a distilled 600M Qwen3-0.6B student runs the 500-article enrichment in **~7 minutes instead of 5.4 hours**, and recovers **most of the teacher's summary quality (59% of the gap)** and **half of the classification gap (50%)** — beating the teacher outright on *urgency* labeling, and beating both non-distillation controls on summary quality. The recovery is uneven in ways that matter: on classification the aggregate only ties few-shot prompting (the win is field-specific — *urgency*, *frame*), *depth* is untrustworthy for every small-model arm, and on summaries the student transferred the teacher's style and specificity slightly faster than its faithfulness, leaving it ~4 points below the untuned base — a gap that, on inspection, is confined to short-source articles.
+We set out to quantify what distillation buys when a structured-output pipeline moves from an 8B teacher to a sub-1B on-device student, with a shipped reader's enrichment batch as the test bed. On a commodity MacBook, a distilled 600M Qwen3-0.6B student runs the 500-article enrichment in **~7 minutes instead of 5.4 hours**, and recovers **most of the teacher's summary quality (59% of the gap)** and **half of the classification gap (50%)** — beating the teacher outright on *urgency* labeling, and beating both non-distillation controls on summary quality. The recovery is uneven in ways that matter: on classification the aggregate only ties few-shot prompting (the win is field-specific — *urgency*, *frame*), *depth* is untrustworthy for every small-model arm, and on summaries the student transferred the teacher's style and specificity slightly faster than its faithfulness, leaving it ~4 points below the untuned base — a gap that, on inspection, is confined to short-source articles.
 
 The resulting verdict is therefore **not** "distillation works" or "distillation hallucinates" but a **per-field, per-context engine assignment**: ship the distilled student for structure, for *urgency* / *frame*, and for summaries of substantive articles; use prompting for *tone*; and fall back to prompting or the teacher for faithfulness-critical prose on thin sources.
 
