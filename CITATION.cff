@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this study, harness, or data, please cite it as below."
+title: "Fast and Faithful? Distilling an 8B Reasoning Teacher into a Sub-1B On-Device Student for Structured News Enrichment"
+authors:
+  - family-names: Chaganti
+    given-names: Vinay Kumar
+    email: cvk.atreya@gmail.com
+type: software
+repository-code: "https://github.com/socraticsurge/distill-locally"
+license: MIT
+date-released: 2026-07-02
+keywords:
+  - knowledge distillation
+  - small language models
+  - LLM-as-judge
+  - on-device inference
+  - summarization
+  - structured output
+abstract: >-
+  Pre-registered study distilling DeepSeek-R1:8b into Qwen3-0.6B for structured
+  RSS-article enrichment (free-text summary, five categorical labels, open-set
+  topics), evaluated per sub-task against two non-distillation controls with a
+  blinded two-judge LLM panel graded on full article text. Reports gap-closure
+  toward the teacher, a localized short-source faithfulness regression, and a
+  per-field engine assignment. Reproduces offline from a cached judge panel.
