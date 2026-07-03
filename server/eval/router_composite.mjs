@@ -9,7 +9,10 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 
-const SCORES = "data/eval/scores_gemini_nemotron_n93_fullctx.json";
+// Default = the eight-arm scorecard (paper §8.1, recomputed after the Amendment 2
+// re-grade). Set SCORES=data/eval/scores_gemini_nemotron_n93_fullctx.json to
+// reproduce the original seven-arm composites.
+const SCORES = process.env.SCORES || "data/eval/scores_gemini_nemotron_n93_fullctx_8arm.json";
 const TEST = "data/eval/test.jsonl";
 const SHORT_CHARS = 1200; // same threshold as §6.2.1
 const SEEDS = ["tuned_rss_tuned_s1", "tuned_rss_tuned_s2", "tuned_rss_tuned_s3"];
