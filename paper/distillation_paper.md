@@ -2,37 +2,11 @@
 
 *A multi-judge, per-field evaluation of DeepSeek-R1 → Qwen3-0.6B*
 
-**Author:** Vinay Kumar Chaganti
-**Date:** July 2026
-**Status:** Final. Full-text grading is canonical throughout. Two-judge panel (Gemini Flash Lite + Nemotron-550B), N = 93 held-out articles. Every *directional* finding is confirmed by each judge independently (§7); the exact *magnitudes* are judge-dependent, and only human gold labels could settle them (§10). This paper reports what the design can support and is explicit about what it cannot.
+**Vinay Kumar Chaganti**  
+Independent researcher · cvk.atreya@gmail.com  
+July 2026 · Preprint
 
----
-
-## Plain-language summary
-
-Small language models are cheap and fast; large ones are slow but produce better text. A common trick, **knowledge distillation**, tries to get the best of both: a large "teacher" model writes many examples, and a small "student" model is trained to imitate them. The hope is a small model that runs on your own laptop but writes almost as well as the big one.
-
-We tested this on a real product need. **Atlas Pulse** is a local news reader that tags every article it fetches with a short summary and a handful of labels (how urgent it is, its tone, its topics, and so on). Doing this with a good 8-billion-parameter model took about **39 seconds per article** — a backlog of 500 articles took **5.4 hours** on a MacBook. We wanted the same quality in the time it takes to make coffee.
-
-We trained a **600-million-parameter student** (about 13× smaller) on the teacher's output, and then asked a careful question: *not* "does distillation work?" but **"how much of the teacher's quality did the small model actually recover — on which parts of the job — and what did it cost?"**
-
-The short answer:
-
-- **Speed: solved completely.** Every small-model version runs at about **0.8 seconds per article**. The 5.4-hour job becomes **~7 minutes**, using ~11× less memory, at zero cost, entirely on-device. This is a benefit of *size*, not of distillation — any small model would be this fast.
-- **Quality: recovered substantially, but unevenly.** On writing summaries, the trained student clearly beat the two cheaper alternatives we compared against. On labels, it was excellent on some fields and no better than simple prompting on others.
-- **One honest cost:** on very short articles, the trained student sometimes **invents plausible-sounding details** that aren't in the source. This is small and localized, but for a product that shows summaries to a reader it matters, so we recommend routing those cases elsewhere.
-
-The practical output is therefore **not** "use the small model for everything." It is a **routing table** (§8): use the distilled student where it genuinely wins, and fall back to prompting or the teacher where it doesn't. That per-field discipline — and the honest measurement behind it — is the paper's contribution.
-
-**A caveat we state up front:** the teacher here is a *reasoning* model, but our experiment does **not** isolate whether its reasoning nature mattered. We trained the student on the teacher's final answers only (no chain-of-thought), and we did not include an equal-size non-reasoning teacher for comparison. So this paper measures what an 8B teacher of this kind transfers to a sub-1B student; it does **not** establish that a "reasoning" teacher was necessary. That comparison is the single most valuable open question we leave (§11).
-
----
-
-## Study at a glance
-
-![](figures/fig_study_at_a_glance.png)
-
-**Study at a glance.** The full experiment in one diagram: 500 articles are labeled by the teacher, split into train and test, the student is fine-tuned on the training labels, seven arms generate outputs on the held-out test set, each output is scored on three separate sub-tasks by a two-judge panel, and results are reported as gap-closure toward the teacher.
+**Scope of claims.** All results are from full-text judge grading with a two-judge panel (Gemini Flash Lite + Nemotron-550B) on N = 93 held-out articles. Every directional finding is confirmed by each judge independently (§7); exact magnitudes are judge-dependent (§10).
 
 ---
 
@@ -48,11 +22,11 @@ The actionable result is a **per-field engine assignment**: the distilled studen
 
 ---
 
-## 1. Introduction: the goal was fast *and* faithful, not just fast
+## 1. Introduction
 
-This study began as an engineering problem, not an evaluation. **Atlas Pulse** — a local-first RSS reader — enriches every incoming article with a structured JSON object: a short analytical summary plus categorical fields (*sentiment, urgency, framing, tone, depth*) and topic tags. Generating that with the `deepseek-r1:8b` teacher produced output we were happy with, but at ~39 s/article; enriching a 500-article backlog was a 5.4-hour job on a consumer MacBook (Figure 5, left). The goal was to keep that output quality while making the batch fast enough to run locally and casually — ideally in the time it takes to make coffee.
+This study began as an engineering problem, not an evaluation. **Atlas Pulse** — a local-first RSS reader — enriches every incoming article with a structured JSON object: a short analytical summary plus categorical fields (*sentiment, urgency, framing, tone, depth*) and topic tags. Generating that with the `deepseek-r1:8b` teacher produced output we were happy with, but at ~39 s/article; enriching a 500-article backlog was a 5.4-hour job on a consumer MacBook (Figure 5, left). The goal was to keep that output quality while making the batch fast enough to run locally as a routine, unattended batch job.
 
-Two levers were available, and it is worth being precise about which does what, because conflating them was the earlier draft's central error.
+Two levers were available, and it is worth being precise about which does what, because the two are easy to conflate.
 
 - **Model size buys speed.** A 0.6B model runs ~40× faster than the 8B teacher regardless of how it was trained. This lever is free and was never in question.
 - **Distillation buys quality at that size** — it is the only lever that can make a 0.6B model produce output resembling the teacher's. This is the lever under test.
@@ -61,7 +35,7 @@ So the real question is not "is the small model faster" (trivially yes) nor "was
 
 > **How much of an 8B teacher's output quality can a 600M student recover through distillation — on each part of a structured task — and does it preserve the properties (faithfulness above all) that a reader-facing product cannot compromise?**
 
-An earlier internal pass answered a cruder version ("distillation matched or exceeded the teacher") with a method that could not support it: a single same-generation judge, N = 20, a 0–5 rubric that saturated at 4.95 on faithfulness, and one training run. This paper re-runs the question with a design built to catch the method where that pass flattered it: 93 test articles, seven arms including two non-distillation controls, a decomposition into three sub-tasks, a multi-family judge panel validated by a negative control, three training seeds, and paired-bootstrap significance tests. The checklist and primary comparison were **fixed after a pilot and before scoring** (`evaluation_design.md`, `PREREGISTRATION.md`), so the summary rubric could not be tuned to the result.
+An earlier internal pass answered a cruder version ("distillation matched or exceeded the teacher") with a method that could not support it: a single same-generation judge, N = 20, a 0–5 rubric that saturated at 4.95 on faithfulness, and one training run. This paper re-runs the question with a design that closes each of those gaps: 93 test articles, seven arms including two non-distillation controls, a decomposition into three sub-tasks, a multi-family judge panel validated by a negative control, three training seeds, and paired-bootstrap significance tests. The checklist and primary comparison were **fixed after a pilot and before scoring** (`evaluation_design.md`, `PREREGISTRATION.md`), so the summary rubric could not be tuned to the result.
 
 ### 1.1 Contributions
 
@@ -126,7 +100,9 @@ The asymmetry in the last column is the reason the study's conclusion is a **per
 
 ## 4. Experimental setup
 
-The full experiment — data, split, training, the seven arms, the three-way decomposition, the judge panel, and the statistics — is shown in the *Study at a glance* diagram above.
+![](figures/fig_study_at_a_glance.png)
+
+**Figure 2.** Overview of the experimental pipeline. 500 articles are labeled by the teacher and split 401/93; the student is fine-tuned on the training labels (three seeds); seven arms generate outputs on the held-out test set; each output is scored on three sub-tasks by a two-judge panel; results are reported as gap-closure toward the teacher.
 
 ### 4.1 Models
 
@@ -157,7 +133,7 @@ QLoRA fine-tune of Qwen3-0.6B directly on the 401 teacher outputs via Unsloth (L
 
 Temperature 0 everywhere, so the only characterized variance is the tuned model's three training seeds — exactly what the confidence intervals capture. Distillation is credited only where it beats **both** controls on something real. All arms see the full article at generation time.
 
-## 5. Evaluation method (human-free on the critical path)
+## 5. Evaluation method
 
 The design below (metrics, checklist, controls, split, seeds, primary comparison) was fixed after a 12-article pilot and before any scored run, and not revised after seeing results — so the summary rubric could not be tuned to flatter the outcome. The exact checklist wording and judge prompts are in Appendix A.
 
@@ -188,23 +164,23 @@ We are explicit about what this does and does not validate. It confirms the judg
 
 All metrics as mean ± 95% CI (bootstrap over the 93 test items; the headline arm comparisons use a **paired bootstrap** over per-article scores, 20,000 resamples, which cancels per-article difficulty). Tuned metrics are reported as the mean across 3 seeds. **Primary comparison** (fixed before scoring): tuned vs. base+constrained, on checklist pass-rate. **Secondary** (not headline): tuned vs. base, tuned vs. few-shot, and the per-field classification comparisons. These secondary comparisons are numerous (≈15 across fields and checks); given the seed variance we document (§6.6), individual secondary "wins" that are not also confirmed by both judges (§7) should be treated as suggestive rather than established. Non-significant differences are reported as such.
 
-A note on the confidence intervals: the per-article bootstrap captures *article*-level sampling variance around the 3-seed mean. It does **not** fully propagate *training-seed* variance, which §6.6 shows is first-order on the subjective fields. Where seed spread is large (tone, classification macro), the seed range in §6.6 — not the bootstrap CI — is the honest measure of uncertainty.
+A note on the confidence intervals: the per-article bootstrap captures *article*-level sampling variance around the 3-seed mean. It does **not** fully propagate *training-seed* variance, which §6.6 shows is first-order on the subjective fields. Where seed spread is large (tone, classification macro), the seed range in §6.6 — not the bootstrap CI — is the more representative measure of uncertainty.
 
 ## 6. Results
 
-### 6.1 The framing metric: gap-closure toward the teacher
+### 6.1 Gap-closure toward the teacher
 
 Because the goal was teacher quality at student speed, the natural scale is **how far the student traveled from the untuned base (0%) toward the teacher (100%)** on each axis: `(tuned − base) / (teacher − base)`. Figure 3 is the paper in one chart.
 
 ![](figures/fig3_gap_closure.png)
 
-**Figure 3.** Per-axis gap-closure toward the teacher (0 = untuned base, 100 = teacher). Blue = partial recovery; green = beat or overshot the teacher; red = regressed below base. Distillation recovers most summary and classification axes, overshoots two (opening, urgency), and leaves two small summary regressions (faithful, length). urgency beats the teacher outright. The texture — not any single number — is the story.
+**Figure 3.** Per-axis gap-closure toward the teacher (0 = untuned base, 100 = teacher). Blue = partial recovery; green = beat or overshot the teacher; red = regressed below base. Distillation recovers most summary and classification axes, overshoots two (opening, urgency), and leaves two small summary regressions (faithful, length). urgency beats the teacher outright. The per-axis pattern, rather than any single aggregate, is the primary result.
 
 The headline is not one number; it is the *shape*: distillation recovered most of the teacher's quality on most summary axes, exceeded it on two, and left two small summary regressions — faithfulness and length. On classification the picture is more mixed (§6.3). The faithfulness regression is the axis this product's risk threshold cares about, and §6.2.1 shows it is small (−4 pts) and confined to short-source articles.
 
 **A caution about the scale itself.** Gap-closure is a *ratio*, and it becomes unstable when the teacher and base are close (a small denominator). Two axes illustrate this: *depth* has a base→teacher gap of only ~11 points, and *opening* shows a "122% overshoot" that is really a stylistic quirk on which the teacher itself scores low (73.1). We therefore report **absolute deltas alongside every gap-closure figure** below and flag the axes where teacher ≈ base, so the reader can tell a load-bearing percentage from a ratio artifact. Relatedly, because the student can exceed 100% on some axes, the teacher is a *reference point, not a ceiling* — the scale's endpoints are labels of convenience, not physical limits.
 
-### 6.2 Summarization — a real win over both controls, and a localized faithfulness gap
+### 6.2 Summarization
 
 All numbers here are from full-text grading. Checklist pass-rate (primary metric), N = 93, mean of 3 tuned seeds; CIs are per-article bootstrap.
 
@@ -236,19 +212,19 @@ The per-check breakdown shows *where* — and, importantly, separates the produc
 | length | 61.3 | 64.5 | 59.1 | 81.7 | −2.2 | mild regression (−11%) |
 | topics_cover | 87.1 | 95.7 | 95.7 | 98.9 | +8.6 | recovered ~73% |
 
-The gains are broad — specificity (*takeaway* 44→74), the three persona lenses, tone, and opening style all recover most of the way to the teacher, and two axes overshoot it. The two soft spots are **faithfulness (−4)** and **length adherence (−2)**. Because failure costs are asymmetric (§3), we do not fold faithfulness into a single "the student is better" headline — the aggregate checklist win is driven by the style and specificity checks, *while* the one product-critical property regressed slightly. That tension is the real finding, and it gets its own dissection.
+The gains are broad — specificity (*takeaway* 44→74), the three persona lenses, tone, and opening style all recover most of the way to the teacher, and two axes overshoot it. The two soft spots are **faithfulness (−4)** and **length adherence (−2)**. Because failure costs are asymmetric (§3), we do not fold faithfulness into a single "the student is better" headline — the aggregate checklist win is driven by the style and specificity checks, *while* the one product-critical property regressed slightly. That tension is the central result of this section; §6.2.1 examines it.
 
-### 6.2.1 The faithfulness gap — measured honestly
+### 6.2.1 The faithfulness gap
 
 Under full-text grading, faithfulness is base 79.6, tuned 75.6, teacher 93.5. So the tuned student sits slightly *below* the untuned base — a **−4 point gap** (equivalently −29% in gap-closure terms). Two things resolve what is real.
 
 **(a) The earlier lead-only pass exaggerated the regression.** Grading against only the first 1200 characters penalized *every* arm's summaries for claims supported deeper in the article — depressing absolute faithfulness by +25 to +35 points when corrected (base +30.1, tuned +35.1, teacher +24.7, few-shot +25.8). Crucially the uplift appears for every arm, so it is a property of the *grading setup*, not of any model. Because the tuned student writes more specific claims, it was penalized hardest by truncation, which inflated its apparent regression from −4 pts (full-text) to −9 pts (lead-only) — the latter being −47% in gap-closure terms, the number an earlier draft reported.
 
-**(b) What remains is real, and it is localized — on a small subgroup.** Splitting the full-text scores by article length: on **long articles** (>1200 chars, n = 71) the tuned student is level with base (81.7 vs 80.3, +1.4). The entire residual regression concentrates in **short articles** (≤1200 chars, **n = 22**), where tuned drops to 56.0 vs base 77.3 (−21.3) — and on those, lead and full context are identical, so truncation cannot explain it. **We flag the sample size honestly:** −21 points on 22 articles, split three ways by seed, is a real signal but a wide one; we say "concentrated in short sources," not "confined to exactly this," and the effect would benefit from more short-source items and an entailment check (§11). The mechanism is plausible and consistent across seeds: given little article to work with, the distilled student fills the summary with specific-sounding but unsupported claims (Example B, §6.7). On rich source material it stays grounded.
+**(b) What remains is real, and it is localized — on a small subgroup.** Splitting the full-text scores by article length: on **long articles** (>1200 chars, n = 71) the tuned student is level with base (81.7 vs 80.3, +1.4). The entire residual regression concentrates in **short articles** (≤1200 chars, **n = 22**), where tuned drops to 56.0 vs base 77.3 (−21.3) — and on those, lead and full context are identical, so truncation cannot explain it. **The sample size warrants caution:** −21 points on 22 articles, split three ways by seed, is a real signal but a wide one; we say "concentrated in short sources," not "confined to exactly this," and the effect would benefit from more short-source items and an entailment check (§11). The mechanism is plausible and consistent across seeds: given little article to work with, the distilled student fills the summary with specific-sounding but unsupported claims (Example B, §6.7). On rich source material it stays grounded.
 
-**The defensible statement:** distillation recovered most of the teacher's summary quality (59% of the gap; significant wins over both controls), with a small faithfulness cost concentrated in short-source articles. For a reader-facing product that cannot tolerate fabrication, even a localized dip is worth routing around (§8) — but this is a narrow, characterized failure mode, not the blanket "distillation makes the student hallucinate" the raw regression implied.
+**Taken together:** distillation recovered most of the teacher's summary quality (59% of the gap; significant wins over both controls), with a small faithfulness cost concentrated in short-source articles. For a reader-facing product that cannot tolerate fabrication, even a localized dip is worth routing around (§8) — but this is a narrow, characterized failure mode, not the blanket "distillation makes the student hallucinate" the raw regression implied.
 
-### 6.3 Classification — one clear overshoot, one clear failure, and a tie on the rest
+### 6.3 Classification
 
 Per-field accuracy vs. panel proxy-gold (full-text; tuned = mean of 3 seeds), with inter-judge raw agreement. **We add a majority-class baseline column** — the accuracy of always guessing the most frequent label — because several vocabularies are imbalanced (§3) and accuracy below that line is worse than a constant guess:
 
@@ -261,21 +237,21 @@ Per-field accuracy vs. panel proxy-gold (full-text; tuned = mean of 3 seeds), wi
 | **tone** | 0.78 | — | 24.4 | 79.1 | **29.0** | 78.5 | distillation barely moved it; few-shot far better |
 | macro | — | — | 44.7 | 57.8 | 56.0 | 67.3 | 50% gap closure; ≈ few-shot |
 
-Two clean results, one caution, and one honest deflation.
+Two clear results, one caution, and one negative result.
 
 - **Urgency is the standout**: the tuned student hits 78.5% — beating every arm including the teacher — and few-shot prompting actively *degrades* it (56.0%). This is the strongest "the weights genuinely moved" evidence in the study: a capability that only fine-tuning produced and that prompting cannot reach. **We are careful about the interpretation, though.** The student was trained *on the teacher's own urgency labels*, so it out-agreeing the teacher with the judges does not mean it "learned urgency better than the teacher" in an absolute sense; the most likely mechanism is that fine-tuning regularized the student toward a cleaner mapping that aligns with judge priors on a small, subjective vocabulary. The confusion matrix that would fully separate "genuine capability" from "majority-class alignment" is in the data files and is not yet analyzed per-class; we report the delta and flag its interpretation as open.
 - **Frame** shows a smaller version of the same pattern (tuned beats both controls).
 - **Depth is a caution**: at 48.8 the tuned student scores *below* the ~56% you would get by always guessing "standard." On this imbalanced field, none of the small-model arms clears the constant-guess line — a result that only a majority-class baseline makes visible, and that argues against trusting any arm on depth.
 - **Tone as a categorical label is nearly untouched by distillation** (29 vs base 24) while few-shot reaches 79 — a field whose label distribution is far better cued in-context than baked into weights.
 
-**The honest macro picture is a tie with few-shot** (56.0 vs 57.8): on the aggregate categorical task, prompting is as good as fine-tuning, and the distillation advantage is concentrated in specific fields (*urgency, frame*) rather than across the board. This is a sharper, less flattering result than an aggregate score alone would give — and it is why the deployment recommendation is per-field (§8) rather than "use the distilled model for classification."
+**On the macro average, distillation ties few-shot** (56.0 vs 57.8): on the aggregate categorical task, prompting is as good as fine-tuning, and the distillation advantage is concentrated in specific fields (*urgency, frame*) rather than across the board. This is a sharper, less flattering result than an aggregate score alone would give — and it is why the deployment recommendation is per-field (§8) rather than "use the distilled model for classification."
 
 ### 6.4 Structure and topics
 
 - **Schema validity:** the tuned student produces valid 7-field JSON reliably — but constrained decoding reaches the same structural validity with *zero training*. So structure alone is not a reason to distill; it is a decoding flag. The distillation value is in what fills the fields, not that they parse.
 - **Topic coverage:** tuned 95.7% vs base 87.1% vs teacher 98.9% (full-text) — 73% gap closure; a solid, low-stakes gain, and level with few-shot.
 
-### 6.5 Efficiency — measured, per-arm, on the test set
+### 6.5 Efficiency
 
 We timed every arm on all 93 items (per-item `durationMs` recorded during generation):
 
@@ -293,11 +269,11 @@ We timed every arm on all 93 items (per-item `durationMs` recorded during genera
 
 Every 0.6B arm is ~0.8 s/article; the tuned model is the fastest by wall-clock — not because its throughput is higher (it is comparable, ~165 tok/s) but because distillation taught it to write **shorter** outputs, so total time per article is lowest. The **5.4 h → ~7 min** batch collapse (Figure 5) is therefore real and, notably, slightly better for the distilled model than for any other student arm.
 
-### 6.6 Seed variance — why one run would have misled
+### 6.6 Seed variance
 
 The three seeds diverge sharply on the hardest axis: *tone*-label accuracy ranged **8.6% → 46.2%** across seeds; overall classification macro ranged **50.3 → 66.5**. A single-seed study could have reported any point in that range as "the" result. The lesson: at 0.6B, seed choice is a **first-order effect on the subjective fields**, not a rounding error — which is why the per-article bootstrap CIs alone understate uncertainty on those fields (§5.4), and why we report the seed range explicitly. The summary checklist and *urgency* were more stable across seeds than *tone*, but we report the tuned values as 3-seed means throughout precisely so that no single lucky (or unlucky) seed drives a headline.
 
-### 6.7 What the outputs actually look like — held-out examples
+### 6.7 Qualitative examples
 
 Aggregate numbers hide the character of what distillation changed. The following are verbatim outputs on held-out test articles (tuned column = seed 1), chosen to show a representative win and the faithfulness cost.
 
@@ -316,15 +292,15 @@ The tuned summary is faithful, correctly structured, and captures the article's 
 
 This is the residual faithfulness gap (§6.2.1) in a single instance — a genuine fabrication, not merely something absent from a truncated lead, and exactly the thin-source failure mode §6.2.1 isolates statistically. Against the bar a reader-facing summary demands, this is the failure that makes the routing table (§8) fall back to a more careful engine for faithfulness-critical prose — not because distillation "failed" (it recovered 59% of the summary gap and beat both controls), but because this product's tolerance for invented content is near zero.
 
-## 7. Robustness: does the story survive the judge?
+## 7. Robustness across judges
 
 Inter-judge disagreement is 26.8% per check, so **magnitudes are judge-dependent**. But every *directional* finding in §6 holds under **each judge independently**: both judges rank tuned > constrained and tuned > few-shot on the summary checklist, both put *urgency*-tuned above the teacher, and both rank *tone*-label few-shot ≫ tuned. We therefore make only directional claims and explicitly do **not** claim the exact percentages are judge-invariant. A third same-family judge was not added because it cannot change a direction the two judges already agree on — only human gold labels can settle the magnitudes (§10, §11). The negative control (0% faithful on mismatch, §5.3) confirms the grader measures article-grounded faithfulness rather than surface plausibility, within the limits noted in §5.3.
 
 **A cautionary note on judge context (why we re-graded).** The faithfulness finding is also a lesson in how a single scoring choice can manufacture a result. An earlier pass showed the judges only the first 1200 characters of each article and produced a −9-point faithfulness gap for the tuned student (−47% in gap-closure terms). Re-grading with the full article (the only change) shrank that to −4 points / −29% and revealed it was concentrated in short articles (§6.2.1). Two independent checks confirmed the artifact before we trusted the correction: the +25–35 pt full-vs-lead uplift appeared for *every* arm (so it is a grading-setup effect, not a tuned-model regression), and on long articles — where lead and full context differ most — the tuned student is level with base. **The takeaway for reference-free LLM-judge faithfulness evaluation generally: grade against the full source, or a truncation artifact will masquerade as a model regression** — in our case, more than twice the size of the real effect.
 
-## 8. Did the exercise meet its goal? The per-field engine assignment
+## 8. Per-field engine assignment
 
-The goal was teacher-quality output at student speed. Judged honestly against that bar, split by sub-task:
+The goal was teacher-quality output at student speed. Judged against that bar, split by sub-task:
 
 - **Speed: fully met.** ~0.8 s/article, 5.4 h → ~7 min, ~11× less RAM, $0, on-device. (This came with model *size*; distillation made it marginally better by shortening outputs.)
 - **Summary quality: substantially met, with one localized caveat.** 59% gap closure and significant wins over both non-distillation controls (+15.5 vs constrained, +5.9 vs few-shot), with genuine gains in specificity and analytical voice. The one soft spot is faithfulness, ~4 points below the untuned base — confined to short-source articles; on longer articles the student is level with base.
@@ -347,9 +323,9 @@ The answer to "was there a realistic application?": **yes** — as the on-device
 
 **A transfer hypothesis, offered as such (not a measured result).** The 5.4 h → ~7 min collapse is the signature of any high-volume, schema-bound, latency-sensitive enrichment pipeline currently paying mid/large-model latency per item. The per-field discipline *plausibly* generalizes to support/ticket triage (priority + category, the direct analogue of urgency + frame), log/alert classification, document/email intake, moderation pre-filters, and catalog attribute extraction. In each, the pattern would be: distill the small model for the structured, high-frequency labels; keep the large model for the low-frequency, high-stakes free text; and *measure per field* rather than assuming the small model wins everything. We measured exactly one task family (§10) — these are directions to test, not claims we have verified.
 
-## 9. The methods contribution
+## 9. Methods contribution
 
-Beyond the specific routing table, the study contributes a **decomposed, reference-free, fully-local evaluation harness** for structured-output distillation. Each ingredient is individually established in the LLM-judge literature (§2); the contribution is assembling them into a discipline that catches the ways an earlier, sloppier pass flattered the same method:
+Beyond the specific routing table, the study contributes a **decomposed, reference-free, fully-local evaluation harness** for structured-output distillation. Each ingredient is individually established in the LLM-judge literature (§2); the contribution is assembling them into a discipline that catches the ways an earlier, less controlled pass overstated the same method:
 
 1. **Per-sub-task decomposition** that localizes what distillation moves — without it, the faithfulness regression, the urgency overshoot, and the tone-labeling failure all vanish into one flattering average.
 2. **Gap-closure-to-teacher** as the reporting scale, which matches the engineering goal and naturally exposes overshoot and regression (used with the absolute-delta and small-denominator caveats of §6.1).
@@ -366,13 +342,13 @@ We state these plainly; several bound the strength of the headline claims.
 - **Two-judge panel; magnitudes uncertain; a preregistration deviation.** Directions are robust under each judge; exact percentages are not judge-invariant (§7). The panel was reduced from the preregistered multi-family set to two judges for operational reasons (§5.2), and the two-judge "consensus" has no true majority on the 27% of items where judges disagree (§5.2).
 - **Faithfulness is reference-free LLM-judged, not entailment-verified.** Full-text grading removed the truncation artifact, but the metric is still a judge's claim-support call, not a formal NLI check. The negative control validates the gross case, not subtle in-domain fabrication (§5.3). The residual −4 and its short-article concentration should be confirmed with a MiniCheck-class verifier (§11).
 - **The short-article finding rests on a small subgroup** (n = 22, §6.2.1). It is consistent across seeds and robust to the truncation control, but "concentrated in short sources" is as strong as the data support — not "confined to exactly these."
-- **Seed variance is first-order on subjective fields** (§6.6). The per-article bootstrap CIs do not fully propagate it; the reported seed *ranges* are the honest uncertainty on tone and macro.
+- **Seed variance is first-order on subjective fields** (§6.6). The per-article bootstrap CIs do not fully propagate it; the reported seed *ranges* are the appropriate uncertainty measure on tone and macro.
 - **Third-order distillation.** `deepseek-r1:8b` is itself a distilled model and Qwen3-0.6B is itself a distillation product; the teacher's own quality caps what the student can inherit.
 - **Single task family.** One reader's feeds; the routing table is a hypothesis for the related use cases (§8), not a measured result there. No generalization to unseen sources is claimed (§4.2).
 
-## 11. Future work (opportunities, documented)
+## 11. Future work
 
-The exercise is concluded; these are the openings it identified, ordered by value.
+These are the openings the study identified, ordered by expected value.
 
 1. **Run the equal-size non-reasoning-teacher arm** (Qwen2.5-7B-Instruct / Llama-3.1-8B-Instruct). This is the one experiment that would convert the study from "we distilled an 8B teacher" into an answer to "does a *reasoning* teacher help when distilling for *non-reasoning* tasks at sub-1B?" — a question the related work calls contested and that NaturalThoughts studies only at 7–8B. Highest value by far.
 2. **Turn the truncation observation into a measured effect.** A truncation sweep (600 / 1200 / 2400 / full chars) showing the manufactured-regression artifact scales with truncation would upgrade the paper's most citable nugget (§7) from a two-point anecdote to a curve others can reference.
@@ -386,7 +362,7 @@ The exercise is concluded; these are the openings it identified, ordered by valu
 
 We set out to make a slow, local, reasoning-model batch job fast without giving up its output quality. On a commodity MacBook, a distilled 600M Qwen3-0.6B student runs the 500-article enrichment in **~7 minutes instead of 5.4 hours**, and recovers **most of the teacher's summary quality (59% of the gap)** and **half of the classification gap (50%)** — beating the teacher outright on *urgency* labeling, and beating both non-distillation controls on summary quality. The recovery is uneven in ways that matter: on classification the aggregate only ties few-shot prompting (the win is field-specific — *urgency*, *frame*), *depth* is untrustworthy for every small-model arm, and on summaries the student transferred the teacher's style and specificity slightly faster than its faithfulness, leaving it ~4 points below the untuned base — a gap that, on inspection, is confined to short-source articles.
 
-The honest verdict is therefore **not** "distillation works" or "distillation hallucinates" but a **per-field, per-context engine assignment**: ship the distilled student for structure, for *urgency* / *frame*, and for summaries of substantive articles; use prompting for *tone*; and fall back to prompting or the teacher for faithfulness-critical prose on thin sources.
+The resulting verdict is therefore **not** "distillation works" or "distillation hallucinates" but a **per-field, per-context engine assignment**: ship the distilled student for structure, for *urgency* / *frame*, and for summaries of substantive articles; use prompting for *tone*; and fall back to prompting or the teacher for faithfulness-critical prose on thin sources.
 
 Three lessons generalize:
 
@@ -398,7 +374,7 @@ And one lesson we leave open rather than claim: we distilled a *reasoning* teach
 
 ---
 
-## Appendix A — the frozen summary checklist and judge prompts
+## Appendix A — Summary checklist and judge prompts
 
 **Summary checklist** (8 binary checks + topics), graded by the panel against the full article. Frozen after the pilot, before scoring (`PREREGISTRATION.md`).
 
@@ -452,7 +428,44 @@ Tooling and analysis support: the *Antigravity* agent framework and *Claude Scie
 
 ## References
 
-*(To be finalized against primary sources before submission.)* Hinton et al. 2015; Kim & Rush 2016; Xu et al. 2024 (Speculative KD / KD survey); Zhu et al. 2023; Hsieh et al. 2023 (Distilling step-by-step); Li et al. 2023 (Symbolic CoT Distillation); DeepSeek-AI 2025 (DeepSeek-R1); Zhang et al. 2025 (100 Days After DeepSeek-R1); Li et al. 2025 (NaturalThoughts, arXiv:2507.01921); Aggarwal et al. 2025 (OptimalThinkingBench, arXiv:2508.13141); Yang et al. 2025 (Qwen3); Liu et al. 2023 (G-Eval); Ye et al. 2023 (FLASK); Lee et al. 2024 (CheckEval); Kim et al. 2024 (Prometheus 2); Min et al. 2023 (FActScore); RAGChecker 2024; Tang et al. 2024 (MiniCheck); Manakul et al. 2023 (SelfCheckGPT); OpenAI 2025 (HealthBench).
+Aggarwal, P., et al. (2025). OptimalThinkingBench: Evaluating Over and Underthinking in LLMs. arXiv:2508.13141.
 
+Arora, R. K., et al. (2025). HealthBench: Evaluating Large Language Models Towards Improved Human Health. arXiv:2505.08775.
 
+DeepSeek-AI (2025). DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning. arXiv:2501.12948.
 
+Hinton, G., Vinyals, O., and Dean, J. (2015). Distilling the Knowledge in a Neural Network. arXiv:1503.02531.
+
+Hsieh, C.-Y., et al. (2023). Distilling Step-by-Step! Outperforming Larger Language Models with Less Training Data and Smaller Model Sizes. arXiv:2305.02301.
+
+Kim, S., et al. (2024). Prometheus 2: An Open Source Language Model Specialized in Evaluating Other Language Models. arXiv:2405.01535.
+
+Kim, Y., and Rush, A. M. (2016). Sequence-Level Knowledge Distillation. arXiv:1606.07947.
+
+Lee, Y., et al. (2024). CheckEval: A Reliable LLM-as-a-Judge Framework for Evaluating Text Generation Using Checklists. arXiv:2403.18771.
+
+Li, L. H., et al. (2023). Symbolic Chain-of-Thought Distillation: Small Models Can Also "Think" Step-by-Step. arXiv:2306.14050.
+
+Li, Y., et al. (2025). NaturalThoughts: Selecting and Distilling Reasoning Traces for General Reasoning Tasks. arXiv:2507.01921.
+
+Liu, Y., et al. (2023). G-Eval: NLG Evaluation Using GPT-4 with Better Human Alignment. arXiv:2303.16634.
+
+Manakul, P., Liusie, A., and Gales, M. J. F. (2023). SelfCheckGPT: Zero-Resource Black-Box Hallucination Detection for Generative Large Language Models. arXiv:2303.08896.
+
+Min, S., et al. (2023). FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long Form Text Generation. arXiv:2305.14251.
+
+Ru, D., et al. (2024). RAGChecker: A Fine-grained Framework for Diagnosing Retrieval-Augmented Generation. arXiv:2408.08067.
+
+Tang, L., Laban, P., and Durrett, G. (2024). MiniCheck: Efficient Fact-Checking of LLMs on Grounding Documents. arXiv:2404.10774.
+
+Xu, W., et al. (2024). Speculative Knowledge Distillation: Bridging the Teacher-Student Gap Through Interleaved Sampling. arXiv:2410.11325.
+
+Xu, X., et al. (2024). A Survey on Knowledge Distillation of Large Language Models. arXiv:2402.13116.
+
+Yang, A., et al. (2025). Qwen3 Technical Report. arXiv:2505.09388.
+
+Ye, S., et al. (2023). FLASK: Fine-grained Language Model Evaluation Based on Alignment Skill Sets. arXiv:2307.10928.
+
+Zhang, C., et al. (2025). 100 Days After DeepSeek-R1: A Survey on Replication Studies and More Directions for Reasoning Language Models. arXiv:2505.00551.
+
+Zhu, X., et al. (2023). A Survey on Model Compression for Large Language Models. arXiv:2308.07633.
