@@ -13,6 +13,7 @@ This repository was extracted from the "Atlas Pulse" RSS reader app so the study
 - **The paper:** [`paper/distillation_paper.md`](paper/distillation_paper.md) — or the rendered arXiv-style [`paper/distillation_paper.pdf`](paper/distillation_paper.pdf) (with figures).
 - **Reviewer's map (every claim → the file that backs it):** [`paper/REVIEW_MANIFEST.md`](paper/REVIEW_MANIFEST.md)
 - **Pre-registration (frozen before scoring):** [`paper/PREREGISTRATION.md`](paper/PREREGISTRATION.md) · full design: [`paper/evaluation_design.md`](paper/evaluation_design.md)
+- **Practitioner lessons (the decision surface — teacher/student choice, quantization, tuning recipe, data size, controls, judging):** paper §9.1.
 - **Citing this work:** see [`CITATION.cff`](CITATION.cff).
 
 ## Headline finding
