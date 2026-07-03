@@ -17,7 +17,7 @@ keywords:
   - summarization
   - structured output
 abstract: >-
-  Pre-registered study distilling DeepSeek-R1:8b into Qwen3-0.6B for structured
+  Pre-specified (frozen-before-scoring) study distilling DeepSeek-R1:8b into Qwen3-0.6B for structured
   RSS-article enrichment (free-text summary, five categorical labels, open-set
   topics), evaluated per sub-task against two non-distillation controls with a
   blinded two-judge LLM panel graded on full article text. Reports gap-closure
