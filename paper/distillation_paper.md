@@ -18,7 +18,7 @@ I separate the single JSON output into its three real sub-tasks — a free-text 
 
 The speed target is met and is a property of model size: every 0.6B arm runs at ~0.8 s/article, collapsing the 5.4 h batch to ~7 minutes at ~11× less RAM and zero cost. The quality target is met substantially but unevenly. Reframing every metric as **gap-closure toward the teacher** (base = 0%, teacher = 100%), distillation closes ~59% of the summary-quality gap and ~50% of the classification gap. On the aggregate summary checklist the tuned student significantly beats both non-distillation controls — constrained decoding (+15.5 pts, p < 0.001) and few-shot prompting (+5.9 pts, p < 0.001) — so the summary gain is distillation-specific, not merely formatting or in-context imitation. Classification is more mixed: on *urgency* the tuned student tops every arm including the teacher in judge agreement (78% vs 57%) — though a per-class analysis attributes most of that margin to majority-class alignment (+4.3 points over always guessing the dominant label, §6.3) — and it beats both controls on *frame*, but on the classification macro it only ties few-shot (56.0 vs 57.8) and barely moves *tone* labeling (29% vs few-shot's 79%). The one summary soft spot is faithfulness: the tuned student sits ~4 points below the untuned base (75.6% vs 79.6%; teacher 93.5%), and that gap is concentrated in short-source articles (−21 pts on articles ≤ 1200 chars; level with base on longer ones) — a thin-source fabrication tendency, not general hallucination.
 
-The actionable result is a **per-field engine assignment**: the distilled student is the best on-device choice for structure, for *urgency* / *frame*, and for summaries of substantial articles; prompting wins *tone*; and faithfulness-critical prose on thin sources should fall back to prompting or the teacher. I also report material seed variance (tone-labeling ranged 8.6–46.2% across three training seeds) that a single run could not have surfaced. A pre-specified amendment adds a **managed-platform arm** (Distil Labs; its own 120B teacher and synthetic-data expansion): it ties the DIY recipe on summary quality (Δ−3.6, CI spanning zero) while producing the best small-model classifier and the worst thin-source faithfulness — the two training pipelines transfer different capabilities (§6.8).
+The actionable result is a **per-field engine assignment**: the distilled student is the best on-device choice for structure, for *urgency* / *frame*, and for summaries of substantial articles; prompting wins *tone*; and faithfulness-critical prose on thin sources should fall back to prompting or the teacher. For deployment, §8.2 prunes this map to the minimal routing that pays — two engines and one rule. I also report material seed variance (tone-labeling ranged 8.6–46.2% across three training seeds) that a single run could not have surfaced. A pre-specified amendment adds a **managed-platform arm** (Distil Labs; its own 120B teacher and synthetic-data expansion): it ties the DIY recipe on summary quality (Δ−3.6, CI spanning zero) while producing the best small-model classifier and the worst thin-source faithfulness — the two training pipelines transfer different capabilities (§6.8).
 
 ---
 
@@ -355,9 +355,9 @@ The goal was teacher-quality output at student speed. Judged against that bar, s
 
 - **Speed: fully met.** ~0.8 s/article, 5.4 h → ~7 min, ~11× less RAM, $0, on-device. (This came with model *size*; distillation made it marginally better by shortening outputs.)
 - **Summary quality: substantially met, with one localized caveat.** 59% gap closure and significant wins over both non-distillation controls (+15.5 vs constrained, +5.9 vs few-shot), with genuine gains in specificity and analytical voice. The one soft spot is faithfulness, ~4 points below the untuned base — confined to short-source articles; on longer articles the student is level with base.
-- **Classification quality: met unevenly.** 50% of the teacher's gap closed; *urgency* beats the teacher outright and *frame* beats both controls, but the macro only ties few-shot, *tone* labeling barely moved, and *depth* sits below its majority-class baseline. The distilled student is the best on-device engine on some fields and merely tied-or-worse on others — exactly the case for a per-field split rather than a blanket choice.
+- **Classification quality: met unevenly.** 50% of the teacher's gap closed; *urgency* tops the teacher's agreement score (largely majority-class alignment, §6.3) and *frame* beats both controls, but the macro only ties few-shot, *tone* labeling barely moved, and *depth* sits below its majority-class baseline. The distilled student is the best on-device engine on some fields and merely tied-or-worse on others — exactly the case for a per-field split rather than a blanket choice.
 
-The shippable recommendation for Atlas Pulse — and the transferable idea — is therefore **not "use the distilled model" but a routing table**:
+The measured result — and the transferable idea — is therefore **not "use the distilled model" but a per-field routing map**. The map is a *measurement* deliverable; §8.2 reduces it to the configuration that should actually ship:
 
 | Field / output | Best on-device engine | Why |
 |---|---|---|
@@ -398,6 +398,30 @@ Three results, the first of which **corrects the routing table this paper origin
 
 The caveats are inherited rather than new: the summary-routing differences ride on the 22-article short subgroup (§6.2.1's caution applies in full), and this analysis is post-hoc — it uses the pre-specified metrics and grading but the routing rules themselves were fixed after seeing the per-field results, which is exactly what a practitioner tuning a deployment would do, and exactly why it is labeled as engineering validation rather than a confirmatory finding.
 
+### 8.2 From measurement to solution design: what actually ships
+
+The routing map above, and its scoring in §8.1, answer a **measurement** question: which engine is best on each field, and by how much. A deployment answers a different question: **which of those wins are worth operating.** The two have different logics — measurement should be exhaustive; design should be ruthless — and conflating them overstates what a team should build.
+
+The design rule is the product of three quantities this paper already measures: route a field only where *(accuracy gain from routing) × (cost of that field being wrong, §3)* exceeds the standing cost of one more engine to version, monitor, and re-evaluate. Applied to the map:
+
+| Field | Routing gain | Failure cost (§3) | Ship a dedicated engine? |
+|---|---|---|---|
+| summary — long/rich | large; the core product | high | **Yes** — tuned student |
+| summary — short/thin | +26 faithful, but only via the teacher (§8.1) | high | **Priced option** — only if the ~82-min batch budget is acceptable |
+| tone | +50 points (79.1 vs 29.0) | low | **Yes** — the gain is too large to ignore, and it is one extra batch pass over the same runtime |
+| depth | +6 over the majority class (§6.8) | low | No |
+| urgency | ≤ +4 over a constant guess (§6.3) | low | No |
+| sentiment, topics | tied across engines | low | No |
+
+The shipped configuration for this product is therefore **two engines and one rule** — the tuned student everywhere, a single few-shot pass for *tone*, with the teacher fallback for thin-source summaries held as a deliberate, latency-priced option — not the full map. That captures most of the measured routing benefit at a fraction of the operating surface. (Implementation note: routing runs *batch-by-engine* — every article through the tuned student, then one few-shot pass for the routed field, merge — never per-article model swapping, which would thrash model loading.)
+
+Two costs of routing that this harness does not measure, stated plainly:
+
+1. **Cross-field coherence.** When *tone* comes from one engine and the summary from another, nothing enforces agreement between them; an alarmed summary under an "optimistic" badge is a failure mode that exists *only because of routing*. Checking it — a judge pass on label–summary consistency for routed vs. single-engine outputs — is unmeasured here and is the first thing a §8 skeptic should ask for (§11).
+2. **Maintenance surface.** Every routed engine is one more artifact to re-evaluate whenever anything changes (base model, teacher, feed mix). The offline harness amortizes this cost here — one command re-scores every arm — but a team without such a harness inherits the liability silently.
+
+The distinction generalizes past this study: the **scientific value** of a per-field evaluation is the complete map — every winner at every granularity, including the wins too small to use. The **application value** is the smallest routed subset that pays. The map is the menu; the design is the order.
+
 ## 9. Methods contribution
 
 Beyond the specific routing table, the study contributes a **decomposed, reference-free, fully-local evaluation harness** for structured-output distillation. Each ingredient is individually established in the LLM-judge literature (§2); the contribution is assembling them into a discipline that catches the ways an earlier, less controlled pass overstated the same method:
@@ -423,7 +447,7 @@ The findings above came from a chain of build decisions that any team distilling
 | Controls | Few-shot prompting; constrained decoding | Nearly free to run, and they changed the conclusion twice: structure needs no training at all, and *tone* belongs to prompting |
 | Judges | Two model families that completed reliably; full-source grading | Free-tier hosted judges fail mid-run; grade against the full source or a truncation artifact will masquerade as a model regression (§7) |
 | Reporting scale | Gap-closure toward the teacher, with absolute deltas alongside | Matches the deployment question directly; watch small denominators (§6.1) |
-| Ship decision | Per-field routing table (§8) | The right unit of deployment is the field, not the model |
+| Ship decision | Measure per field; ship the pruned subset (§8.2) | The unit of *measurement* is the field; the unit of *deployment* is the minimal routing that pays — here, two engines and one rule |
 | Build vs. buy | Both run: DIY QLoRA (free Colab, 3 seeds, hands-on) and a managed platform (Distil Labs, one 14.5 h hands-off run) | Statistical tie on the summary primary (Δ−3.6 [−8.5, +1.1]); the recipes transfer different capabilities — raw teacher outputs → writing style, synthetic expansion → label diversity (§6.8). Choose per target field |
 
 ## 10. Limitations
@@ -455,7 +479,7 @@ These are the openings the study identified, ordered by expected value.
 
 I set out to quantify what distillation buys when a structured-output pipeline moves from an 8B teacher to a sub-1B on-device student, with a shipped reader's enrichment batch as the test bed. On a commodity MacBook, a distilled 600M Qwen3-0.6B student runs the 500-article enrichment in **~7 minutes instead of 5.4 hours**, and recovers **most of the teacher's summary quality (59% of the gap)** and **half of the classification gap (50%)** — topping every arm, including the teacher, on *urgency* judge-agreement (a margin the §6.3 confusion analysis shows is largely majority-class alignment), and beating both non-distillation controls on summary quality. The recovery is uneven in ways that matter: on classification the aggregate only ties few-shot prompting (the win is field-specific — *urgency*, *frame*), *depth* is untrustworthy for every small-model arm, and on summaries the student transferred the teacher's style and specificity slightly faster than its faithfulness, leaving it ~4 points below the untuned base — a gap that, on inspection, is confined to short-source articles.
 
-The resulting verdict is therefore **not** "distillation works" or "distillation hallucinates" but a **per-field, per-context engine assignment**: ship the distilled student for structure, for *urgency* / *frame*, and for summaries of substantive articles; use prompting for *tone*; and fall back to prompting or the teacher for faithfulness-critical prose on thin sources.
+The resulting verdict is therefore **not** "distillation works" or "distillation hallucinates" but a two-layer answer. The *measurement* layer is the per-field map (§8, scored as a system in §8.1): every field has a best engine, and the winners differ. The *design* layer (§8.2) is deliberately smaller: ship the tuned student everywhere, one few-shot pass for *tone*, and hold the teacher fallback for faithfulness-critical thin-source prose as a priced option. Measure every field; ship only the routing that pays.
 
 A post-publication amendment sharpened the picture from a second direction: the same training data pushed through a managed distillation platform (different teacher, synthetic expansion) tied the DIY recipe on summary quality while inverting its classification profile — balanced, majority-beating labels but the worst thin-source grounding (§6.8). Even the choice of training pipeline turns out to be a per-field decision.
 
