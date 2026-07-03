@@ -7,7 +7,7 @@ Paths are relative to the repo root: `/Users/vinaychaganti/Documents/VibeCodedAp
 ---
 
 ## 1. What to review
-- **The paper:** [`paper/distillation_paper.md`](distillation_paper.md) (or the rendered [`paper/distillation_paper.pdf`](distillation_paper.pdf)) — the final study (pre-registered, 7 arms, 2-judge panel, N=93, **full-text grading canonical**). **This is the deliverable.**
+- **The paper:** [`paper/distillation_paper.md`](distillation_paper.md) (or the rendered [`paper/distillation_paper.pdf`](distillation_paper.pdf)) — the final study (pre-specified design, 7 arms, 2-judge panel, N=93, **full-text grading canonical**). **This is the deliverable.**
 - **Frozen design (pre-registration):** [`paper/PREREGISTRATION.md`](PREREGISTRATION.md) (frozen 2026-07-02, before scoring) and [`paper/evaluation_design.md`](evaluation_design.md) (full design v0.8). The pipeline diagram: [`paper/evaluation_pipeline.mmd`](evaluation_pipeline.mmd).
 - *Note:* an earlier v1 pilot (20 articles, single judge, saturated rubric) is not part of this repo; the current paper supersedes it in every respect.
 
@@ -36,6 +36,12 @@ Paths are relative to the repo root: `/Users/vinaychaganti/Documents/VibeCodedAp
 | `arm_pilot_*.jsonl` | 12 each | Pilot-set generations (used only for the freeze) |
 
 Arm record schema: `id, feed, arm, output (JSON string), durationMs, evalCount`.
+
+### Router composite (paper §8.1)
+| File | Role |
+|---|---|
+| `server/eval/router_composite.mjs` | Recomputes §8.1: splices per-item grades from the canonical scorecard into routing-rule composites; paired bootstrap vs. all-tuned |
+| `data/eval/router_composite.json` | Output of the above — the §8.1 table's numbers |
 
 ### Judge data (the grading)
 | File | Rows | Role |

@@ -321,11 +321,35 @@ The shippable recommendation for Atlas Pulse — and the transferable idea — i
 | depth | *neither trusted* | no arm beats majority-class; treat as low-confidence |
 | **tone** label | **few-shot base** | prompting far better than distillation here |
 | summary — long/rich articles | **distilled student** | 59% gap closed; faithfulness level with base |
-| summary — short/thin articles | **few-shot base or teacher** | tuned student's fabrication risk concentrates here (§6.2.1) |
+| summary — short/thin articles | **teacher** (if the latency budget allows) | tuned student's fabrication risk concentrates here (§6.2.1); scoring the assembled system shows the few-shot fallback recovers almost nothing — see §8.1 |
 
 The answer to "was there a realistic application?": **yes** — as the on-device engine for structure, for *urgency* / *frame*, and for summaries of substantive articles, reserving prompting for *tone* and reserving prompting or the teacher for faithfulness-critical prose on thin sources. The distilled 0.6B student is the best available on-device engine for a *meaningful slice* of the enrichment layer; it is not a single drop-in winner, and saying which slice is the contribution.
 
 **The intended reuse (measured on one task family so far).** Repeatability was a design input, not an afterthought: the task pattern was chosen because it recurs. The 5.4 h → ~7 min collapse is the signature of any high-volume, schema-bound, latency-sensitive enrichment pipeline currently paying mid/large-model latency per item — support/ticket triage (priority + category, the direct analogue of *urgency* + *frame*), log/alert classification, document/email intake, moderation pre-filters, catalog attribute extraction. For each, the recipe this study argues for is the same: distill the small model for the structured, high-frequency labels; keep the large model for the low-frequency, high-stakes free text; and *measure per field* with the harness above rather than assuming the small model wins everything. I have measured exactly one task family (§10); the harness, not this routing table, is the artifact built to transfer.
+
+### 8.1 The routing table, scored
+
+*(Post-hoc composite — not among the pre-specified analyses of §5.4.)* The table above is a recommendation assembled from per-field verdicts; a recommendation can and should be scored as a system. Because every arm's output for every test article was individually graded, any deterministic routing rule selects, for each article, an output that already exists and already carries grades — so the assembled system's metrics are exact arithmetic over existing per-item scores, and the paired-bootstrap machinery applies unchanged. No new generation or judging is involved. `server/eval/router_composite.mjs` recomputes this section from the canonical scorecard.
+
+I score three variants of the summary routing (labels always route per-field: *urgency*/*frame*/*sentiment* to the tuned student, *tone* to few-shot):
+
+| Configuration | Checklist | vs. all-tuned (paired Δ) | Faithful | Cls. macro (4 fields) | 500-article batch |
+|---|---|---|---|---|---|
+| All-tuned (no routing) | 72.5 | — | 75.6 | 57.9 | ~7 min |
+| Router A — short → few-shot | 72.3 | −0.2 [−1.5, 1.5] | 77.4 | 70.4 | ~7 min |
+| Router C — short → base | 70.0 | −2.5 [−4.7, −0.5] | 80.7 | 70.4 | ~7 min |
+| Router B — short → teacher | 78.6 | **+6.1 [3.1, 9.2]** | 81.7 | 70.4 | ~82 min |
+| All-teacher | 84.8 | — | 93.5 | 70.7 | 5.4 h |
+
+Checklist values are 3-seed means; faithful composites re-weight the §6.2.1 length-split aggregates over the exact 22-short / 71-long subsets; classification macros exclude *depth* (below majority-class for every small-model arm, §6.3).
+
+Three results, the first of which **corrects the routing table this paper originally recommended**:
+
+1. **The few-shot fallback for short sources does not work.** Router A is statistically indistinguishable from no routing at all (Δ−0.2, CI spanning zero) and its composite faithfulness (77.4) remains below the untuned base (79.6) — because few-shot is itself weak on short-source faithfulness (63.6, the same subgroup as §6.2.1). Substituting base zero-shot (Router C) does restore faithfulness (80.7) but pays a significant quality cost (−2.5). On-device prompting fallbacks do not fix the thin-source regression; the corrected recommendation is to pay the teacher on short sources or knowingly accept the regression.
+2. **The teacher-fallback hybrid is a distinct point on the quality–latency frontier.** Sending only the 22/93 short articles to the teacher buys +6.1 checklist points over all-tuned (paired, significant) and above-base faithfulness, at ~82 minutes per 500 articles — between the all-local 7 minutes and the all-teacher 5.4 hours. For a pipeline whose faithfulness tolerance is near zero, this is the configuration the numbers support.
+3. **Per-field classification routing reaches teacher-level agreement at student latency.** The composite's 4-field macro (70.4) matches the teacher's (70.7) while every label is produced on-device in under a second — the strongest quantitative case in the study for treating the field, not the model, as the unit of deployment.
+
+The caveats are inherited rather than new: the summary-routing differences ride on the 22-article short subgroup (§6.2.1's caution applies in full), and this analysis is post-hoc — it uses the pre-specified metrics and grading but the routing rules themselves were fixed after seeing the per-field results, which is exactly what a practitioner tuning a deployment would do, and exactly why it is labeled as engineering validation rather than a confirmatory finding.
 
 ## 9. Methods contribution
 
