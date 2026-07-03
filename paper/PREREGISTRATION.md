@@ -37,7 +37,7 @@ Plus **topics_cover** (do the listed topics capture the article's main themes).
 ## Grader validation
 **Negative control passed in the pilot: 0% faithful on mismatched articles** — the grader demonstrably discriminates real from mismatched summaries.
 
-## Amendment — 2026-07-02 (resource-driven, not result-driven)
+## Amendment 1 — 2026-07-02 (resource-driven, not result-driven)
 - **Judge panel:** `llama-3.3-70b-versatile` → **`llama-3.1-8b-instant`**. Reason: llama-3.3-70b free-tier **TPD = 100k** was exhausted; 8b-instant has a far larger daily token budget so the run completes same-day. Still 3 distinct families (OpenAI / Meta / Google); still excludes Qwen (student) & DeepSeek (teacher). Caveat: 8b is a weaker judge — reported per-judge κ + the negative control will flag if its votes are unreliable.
 - **Token trims (to fit free-tier daily token caps):** article context in judge prompts 6000→1200 chars; `max_completion` 2000→800. Uniform across all arms, so comparisons stay fair; absolute faithfulness may read slightly low since judges see only the article lead.
 - **N:** scored on a **stratified N=40** subsample of the 93-item test set (still 2× the original n=20). These are pre-committed *before* seeing scores.
