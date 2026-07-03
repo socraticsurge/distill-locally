@@ -1,0 +1,83 @@
+{
+  "nShort": 22,
+  "shortChars": 1200,
+  "classification": {
+    "routerFields": {
+      "urgency": 78.5,
+      "frame": 58.1,
+      "sentiment": 66,
+      "tone": 79.1
+    },
+    "macro4": {
+      "router": 70.4,
+      "teacher": 70.7,
+      "tuned": 57.9,
+      "fewshot": 59.6
+    }
+  },
+  "routers": {
+    "A_short_fewshot": {
+      "shortArm": "fewshot",
+      "checklist": {
+        "perSeed": [
+          71.4,
+          74.7,
+          70.8
+        ],
+        "mean": 72.3
+      },
+      "faithful": 77.4,
+      "cls4": 70.4,
+      "batch500min": 7,
+      "pairedVsTuned": {
+        "delta": -0.2,
+        "ci95": [
+          -1.5,
+          1.5
+        ]
+      }
+    },
+    "B_short_teacher": {
+      "shortArm": "teacher",
+      "checklist": {
+        "perSeed": [
+          77.7,
+          81,
+          77.2
+        ],
+        "mean": 78.6
+      },
+      "faithful": 81.7,
+      "cls4": 70.4,
+      "batch500min": 82,
+      "pairedVsTuned": {
+        "delta": 6.1,
+        "ci95": [
+          3.1,
+          9.2
+        ]
+      }
+    },
+    "C_short_base": {
+      "shortArm": "base",
+      "checklist": {
+        "perSeed": [
+          69.1,
+          72.4,
+          68.5
+        ],
+        "mean": 70
+      },
+      "faithful": 80.7,
+      "cls4": 70.4,
+      "batch500min": 7,
+      "pairedVsTuned": {
+        "delta": -2.5,
+        "ci95": [
+          -4.7,
+          -0.5
+        ]
+      }
+    }
+  }
+}
