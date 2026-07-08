@@ -1,5 +1,5 @@
 // Paired bootstrap on the per-item summary-checklist scores (local, no API).
-// Reads the compiled 2-judge scorecard and runs the pre-registered comparisons:
+// Reads the canonical 3-judge scorecard (scores.json) and runs the primary comparisons:
 //   PRIMARY:   tuned vs base+constrained
 //   SECONDARY: tuned vs base, tuned vs few-shot, tuned vs teacher
 // Tuned is reported per-seed AND pooled (per-item mean across the 3 seeds).

@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this study, harness, or data, please cite it as below."
-title: "Fast and Faithful? Distilling an 8B Reasoning Teacher into a Sub-1B On-Device Student for Structured News Enrichment"
+title: "Different Teachers, Different Capabilities: Sub-1B On-Device Distillation for Structured Text Enrichment"
 authors:
   - family-names: Chaganti
     given-names: Vinay Kumar
@@ -17,9 +17,12 @@ keywords:
   - summarization
   - structured output
 abstract: >-
-  Pre-specified (frozen-before-scoring) study distilling DeepSeek-R1:8b into Qwen3-0.6B for structured
-  RSS-article enrichment (free-text summary, five categorical labels, open-set
-  topics), evaluated per sub-task against two non-distillation controls with a
-  blinded two-judge LLM panel graded on full article text. Reports gap-closure
-  toward the teacher, a localized short-source faithfulness regression, and a
-  per-field engine assignment. Reproduces offline from a cached judge panel.
+  Study distilling an 8B reasoning teacher (DeepSeek-R1:8b) into a 0.6B student
+  (Qwen3-0.6B) for structured text enrichment (free-text summary, five categorical
+  labels, open-set topics), evaluated per sub-task against two non-distillation
+  baselines and two teacher controls with a blinded three-judge LLM panel graded on
+  full article text. A same-size non-reasoning-teacher control shows the summary gain
+  follows from the teacher's reasoning nature, not its scale, and different teachers
+  transfer different capabilities. Reports gap-closure toward the teacher, a localized
+  short-source faithfulness effect, and a per-field engine-assignment map. Analysis
+  reproduces offline from the released scorecard.

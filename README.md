@@ -1,11 +1,10 @@
 # Different Teachers, Different Capabilities — Sub-1B On-Device Distillation
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Pre-specified](https://img.shields.io/badge/design-pre--specified%2C%20frozen%20before%20scoring-1a3c6e)
 ![Reproducible](https://img.shields.io/badge/analysis-reproduces%20offline%20from%20the%20scorecard-1a3c6e)
 ![Local](https://img.shields.io/badge/stack-Ollama%20%2B%20Unsloth-8A2BE2)
 
-Can an 8B **reasoning** teacher (`deepseek-r1:8b`) be distilled into a 0.6B student (`Qwen3-0.6B`) for a structured text-enrichment task — one JSON object per article with a free-text summary, five categorical labels, and open-set topics — and *what specifically* does the distillation transfer? The study answers per sub-task, with a pre-specified (frozen-before-scoring), control-anchored, three-judge protocol, and settles the central question with a **same-size non-reasoning-teacher control**: an equal-size instruction teacher (`llama-3.1-8b-instruct`) trained under the identical recipe, plus a larger managed pipeline (`gpt-oss-120b` + synthetic-data expansion) as a systems comparison.
+Can an 8B **reasoning** teacher (`deepseek-r1:8b`) be distilled into a 0.6B student (`Qwen3-0.6B`) for a structured text-enrichment task — one JSON object per article with a free-text summary, five categorical labels, and open-set topics — and *what specifically* does the distillation transfer? The study answers per sub-task, with a control-anchored, three-judge protocol, and settles the central question with a **same-size non-reasoning-teacher control**: an equal-size instruction teacher (`llama-3.1-8b-instruct`) trained under the identical recipe, plus a larger managed pipeline (`gpt-oss-120b` + synthetic-data expansion) as a systems comparison.
 
 *The task was originally drawn from an RSS-reader side project; the repository is the study, standing on its own.*
 
@@ -13,8 +12,6 @@ Can an 8B **reasoning** teacher (`deepseek-r1:8b`) be distilled into a 0.6B stud
 
 ## Start here
 - **The paper:** [`paper/arxiv/paper.pdf`](paper/arxiv/paper.pdf) (12 pp, IEEEtran) — source [`paper/arxiv/paper.tex`](paper/arxiv/paper.tex).
-- **Reviewer's map (every claim → the file that backs it):** [`paper/REVIEW_MANIFEST.md`](paper/REVIEW_MANIFEST.md)
-- **Frozen analysis plan + dated amendments:** [`paper/PREREGISTRATION.md`](paper/PREREGISTRATION.md) · full design: [`paper/evaluation_design.md`](paper/evaluation_design.md)
 - **Browse it yourself:** open [`data/eval/viewer.html`](data/eval/viewer.html) locally — every arm's generation, the panel grades per check, the scorecard, and the analytics, in one offline page.
 - **Citing this work:** [`CITATION.cff`](CITATION.cff).
 
@@ -22,7 +19,7 @@ Can an 8B **reasoning** teacher (`deepseek-r1:8b`) be distilled into a 0.6B stud
 Canonical grading is **full-text** (the judge sees the whole article) by a **three-judge panel** (Gemini Flash Lite · Nemotron-550B · Mistral-Small-119B), reference-free, blinded, majority vote; **N = 93** held-out articles, **twelve arms**, three training seeds. Significance is paired-bootstrap (20 000 resamples).
 
 - **Speed:** the 0.6B student runs at **~0.8 s/article** vs the teacher's **~39 s** — a 500-item batch collapses from **5.4 h to ~7 min** on a laptop.
-- **Summary quality:** the tuned student scores **75.1** on the checklist — beating its pre-registered primary baseline (constrained decoding) by **+16.8** `[11.4, 22.5]`, p<0.001, and few-shot prompting by a secondary **+4.9** `[1.6, 8.2]` — closing **58%** of the base→teacher gap.
+- **Summary quality:** the tuned student scores **75.1** on the checklist — beating its primary baseline (constrained decoding) by **+16.8** `[11.4, 22.5]`, p<0.001, and few-shot prompting by a secondary **+4.9** `[1.6, 8.2]` — closing **58%** of the base→teacher gap.
 - **It's the teacher's *reasoning nature*, not its scale (the control that anchors the title):** a same-size **non-reasoning** teacher, distilled by the identical recipe, trains a student **no better than the untuned base** (+0.6 `[−5.2, 6.4]`, n.s.), while the reasoning-teacher student beats base by **+18.7** `[13.1, 24.4]`. Reasoning-vs-instruction student gap: **+18.1** `[14.4, 22.0]`, p<0.001, across all three seed pairs.
 - **Different teachers transfer different capabilities:** reasoning → **writing quality**; scale + synthetic data → **label diversity** (the managed pipeline is the best small-model classifier, macro 66.3, and the only arm above the `depth` majority baseline); the same-size instruction teacher → **thin-source grounding** (its students hold 74% faithful on the 22 short articles where the reasoning students fall to 55% and the managed student collapses to 36%). *This last effect is a consistent ordering, not a significant aggregate difference (n = 22) — reported as a direction.*
 - **Classification, honestly:** fine-tuning does **not** beat prompting on macro accuracy (55.3 vs 58.5); the `urgency` "win" is mostly majority-class alignment; `depth` sits below its majority baseline for every small-model arm; `tone` is cued far better by a few examples than baked into weights.
@@ -60,7 +57,6 @@ python3 paper/figures/gen_fig7.py            # three-teacher comparison
 ```
 paper/arxiv/      the paper (paper.tex + paper.pdf), arXiv submission package (ARXIV_UPDATE.md,
                   arxiv_submission.tar.gz, arxiv_abstract.txt)
-paper/            REVIEW_MANIFEST.md, PREREGISTRATION.md, evaluation_design.md
 paper/figures/    figure generators (gen_fig*.py) + rendered PNGs (Times New Roman + STIX)
 server/eval/      scoring engine (score.mjs), judge panel + clients (judges.mjs),
                   significance (paired_bootstrap*.mjs), routing (router_bprime.mjs),
@@ -73,7 +69,7 @@ models/           trained GGUFs (~1.5 GB, git-ignored — regenerate via noteboo
 ```
 
 ## Toolchain (all open source)
-Inference: **Ollama**. Fine-tuning: **Unsloth** QLoRA on a free Colab T4. Models: **Qwen3-0.6B**, **DeepSeek-R1:8b**, **Llama-3.1-8B-Instruct** (open weights). Judges (reference-free, hosted): **Gemini Flash Lite** (Google AI Studio), **Nemotron-550B** and **Mistral-Small-119B** (NVIDIA NIM). The core study uses no proprietary training platform; the managed-pipeline comparison arm was trained on **Distil Labs** (`gpt-oss-120b`), and its outputs and scores are in-repo.
+Inference: **Ollama**. Fine-tuning: **Unsloth** QLoRA on a free Colab T4. Models: **Qwen3-0.6B**, **DeepSeek-R1:8b**, **Llama-3.1-8B-Instruct** (open weights). Judges (reference-free, hosted): **Gemini Flash Lite** (Google AI Studio), **Nemotron-550B** and **Mistral-Small-119B** (NVIDIA NIM). The core study uses no proprietary training platform; the managed-pipeline comparison arm was trained through a commercial managed service (`gpt-oss-120b` teacher + synthetic-data expansion), and its outputs and scores are in-repo.
 
 ## Notes
 - **Tag `arxiv-v1-submitted`** pins the exact source submitted to arXiv v1; `main` carries the current revision.
