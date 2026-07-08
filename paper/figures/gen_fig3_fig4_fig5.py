@@ -66,7 +66,7 @@ ax.text(150, 9.3, "summary", fontsize=9, style="italic", color="#5a6675")
 ax.text(150, 3.6, "classification", fontsize=9, style="italic", color="#5a6675")
 ax.set_xlim(-40, 170); ax.set_xlabel("Gap-closure toward teacher (%)   0 = base, 100 = teacher")
 ax.spines[["top", "right"]].set_visible(False)
-ax.set_title("Per-axis recovery: most axes partial, two overshoot, two regress", fontweight="bold", pad=8)
+ax.set_title("Every summary axis recovers over base; classification is mixed", fontweight="bold", pad=8)
 plt.tight_layout(); plt.savefig("paper/figures/fig3_gap_closure.png"); plt.close()
 print("fig3_gap_closure.png")
 
