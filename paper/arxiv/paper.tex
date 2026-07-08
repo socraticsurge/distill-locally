@@ -160,8 +160,10 @@ At this scale, human adjudication is the bottleneck, so the grader is validated 
 Metrics are reported as mean with 95\% confidence interval (bootstrap over the 93 test items; headline comparisons use a paired bootstrap over per-article scores, 20\,000 resamples, cancelling per-article difficulty). Tuned metrics are the mean across three seeds. The primary comparison, fixed before scoring, is tuned versus base + constrained on checklist pass-rate. Secondary comparisons (tuned versus base, tuned versus few-shot, and the per-field classification comparisons) are numerous, so individual secondary wins not also confirmed under each judge alone (Section~\ref{sec:robust}) are treated as suggestive. The per-article bootstrap captures article-level variance around the three-seed mean; it does not fully propagate training-seed variance, which Section~\ref{sec:seeds} shows is first-order on the subjective fields---there, the seed range, not the bootstrap interval, is the representative uncertainty.
 
 \section{Results}\label{sec:results}
+Results are organized by sub-task. A per-axis overview (Section~\ref{sec:gapclosure}) is followed by summarization---checklist, faithfulness, article length, and the teacher control (Sections~\ref{sec:summ}--\ref{sec:reasoning})---then classification and its seed variance (Sections~\ref{sec:classification}--\ref{sec:seeds}). Cross-cutting analyses (efficiency, the three-teacher capability split, examples, and robustness) close the section.
+
 \subsection{Gap-Closure Toward the Teacher}\label{sec:gapclosure}
-Because the goal was teacher quality at student speed, the natural scale is how far the student traveled from the untuned base (0\%) toward the teacher (100\%) on each axis: $(\text{tuned}-\text{base})/(\text{teacher}-\text{base})$. Fig.~\ref{fig:gap} is the paper in one chart. The headline is not one number; it is the \emph{shape}: distillation recovered most of the teacher's quality on the summary axes and overshot two, with no axis left below base. The one residual concern is short-source faithfulness, a subgroup effect the per-axis averages cannot show (Section~\ref{sec:faithful}). On classification the picture is more mixed (Section~\ref{sec:classification}). Gap-closure is a ratio and becomes unstable when teacher and base are close, so absolute deltas are reported alongside every gap-closure figure and axes where teacher $\approx$ base are flagged; because the student can exceed 100\% on some axes, the teacher is a reference point, not a ceiling.
+Because the goal was teacher quality at student speed, the natural scale is how far the student traveled from the untuned base (0\%) toward the teacher (100\%) on each axis: $(\text{tuned}-\text{base})/(\text{teacher}-\text{base})$. Fig.~\ref{fig:gap} shows the shape of recovery, which matters more than any single number: distillation recovered most of the teacher's quality on the summary axes and overshot two, with no axis left below base. The one residual concern is short-source faithfulness, a subgroup effect the per-axis averages cannot show (Section~\ref{sec:faithful}). On classification the picture is more mixed (Section~\ref{sec:classification}). Gap-closure is a ratio and becomes unstable when teacher and base are close, so absolute deltas are reported alongside every gap-closure figure and axes where teacher $\approx$ base are flagged; because the student can exceed 100\% on some axes, the teacher is a reference point, not a ceiling.
 
 \begin{figure}[t]\centering
 \includegraphics[width=\columnwidth]{fig3_gap_closure.png}
@@ -285,6 +287,27 @@ macro & --- & --- & 47.9 & 58.5 & 55.3 & 67.7 \\
 \end{tabular}
 \end{table}
 
+\subsection{Seed Variance}\label{sec:seeds}
+The three seeds diverge sharply on the hardest axis: \emph{tone}-label accuracy ranges 11.8\% to 58.1\% across seeds, and classification macro from 46.9 to 64.5. A single-seed study could have reported any point in that range as ``the'' result; at 0.6B, seed choice is first-order on the subjective fields, not a rounding error, which is why tuned values are three-seed means. Seed agreement is also a near-free confidence signal (Table~\ref{tab:seeds}): on four of the five fields, unanimous predictions are markedly more accurate than split ones---by up to 27 points on \emph{sentiment} and \emph{urgency}---and \emph{tone}, the field distillation fails, is where the seeds almost never agree (unanimous on 12 of 93). The exception is \emph{depth}, where unanimity does not help: the seeds agree confidently on a wrong majority label, consistent with \emph{depth} sitting below its majority-class baseline. Since the three seeds together still run in {\raise.17ex\hbox{$\scriptstyle\sim$}}2.4 s/article, seed-ensemble agreement is a per-item confidence flag at nearly no cost: trust unanimous labels, route split items to a fallback (Section~\ref{sec:assignment}).
+
+\begin{table}[t]
+\centering
+\caption{Seed Unanimity Predicts Label Correctness}
+\label{tab:seeds}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Field & Unanimous (3/3) & Acc. & Split & Acc. \\
+\midrule
+urgency & 83 & 75.9 & 10 & 50.0 \\
+sentiment & 67 & 77.6 & 26 & 50.0 \\
+frame & 57 & 66.7 & 36 & 61.1 \\
+depth & 36 & 44.4 & 57 & 52.6 \\
+tone & 12 & 58.3 & 81 & 43.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Structure, Topics, and Efficiency}\label{sec:efficiency}
 The tuned student produces valid seven-field JSON reliably, but constrained decoding reaches the same validity with zero training, so structure is a decoding flag, not a reason to distill. Topic coverage is tuned 82.8\% versus base 78.5\% versus teacher 96.8\%, a solid low-stakes gain. On efficiency (Table~\ref{tab:efficiency}, Fig.~\ref{fig:efficiency}), every 0.6B arm runs at {\raise.17ex\hbox{$\scriptstyle\sim$}}0.8 s/article; the tuned model is fastest by wall-clock, not because throughput is higher but because distillation taught it to write shorter outputs. The 5.4 h to {\raise.17ex\hbox{$\scriptstyle\sim$}}7 min batch collapse is real and slightly better for the distilled model than for any other student arm.
 
@@ -312,27 +335,6 @@ Tuned (distilled) & 774 & 1341 & 165 \\
 \label{fig:efficiency}
 \end{figure}
 
-\subsection{Seed Variance}\label{sec:seeds}
-The three seeds diverge sharply on the hardest axis: \emph{tone}-label accuracy ranges 11.8\% to 58.1\% across seeds, and classification macro from 46.9 to 64.5. A single-seed study could have reported any point in that range as ``the'' result; at 0.6B, seed choice is first-order on the subjective fields, not a rounding error, which is why tuned values are three-seed means. Seed agreement is also a near-free confidence signal (Table~\ref{tab:seeds}): on four of the five fields, unanimous predictions are markedly more accurate than split ones---by up to 27 points on \emph{sentiment} and \emph{urgency}---and \emph{tone}, the field distillation fails, is where the seeds almost never agree (unanimous on 12 of 93). The exception is \emph{depth}, where unanimity does not help: the seeds agree confidently on a wrong majority label, consistent with \emph{depth} sitting below its majority-class baseline. Since the three seeds together still run in {\raise.17ex\hbox{$\scriptstyle\sim$}}2.4 s/article, seed-ensemble agreement is a per-item confidence flag at nearly no cost: trust unanimous labels, route split items to a fallback (Section~\ref{sec:assignment}).
-
-\begin{table}[t]
-\centering
-\caption{Seed Unanimity Predicts Label Correctness}
-\label{tab:seeds}
-\small
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-Field & Unanimous (3/3) & Acc. & Split & Acc. \\
-\midrule
-urgency & 83 & 75.9 & 10 & 50.0 \\
-sentiment & 67 & 77.6 & 26 & 50.0 \\
-frame & 57 & 66.7 & 36 & 61.1 \\
-depth & 36 & 44.4 & 57 & 52.6 \\
-tone & 12 & 58.3 & 81 & 43.2 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
 \subsection{The Third Teacher: Scale and Synthetic Expansion}\label{sec:platform}
 The third teacher is a managed pipeline: the same 401 articles are uploaded to a commercial service that runs a larger teacher (\texttt{gpt-oss-120b}), expands them synthetically, and fine-tunes the same Qwen3-0.6B base in one hands-off run. Scale, data recipe, and run count all differ from the two 8B teachers at once, so this is a systems comparison, not a clean control. Its student trails the reasoning student on summaries (71.0 versus 75.1) yet posts the best small-model classification macro---66.3, against 55.3 and 57.8 for the two 8B-teacher students and close to the teachers themselves---and it alone among the students clears the \emph{depth} majority baseline. Scale with synthetic expansion transferred label diversity where the reasoning teacher transferred writing.
 
@@ -359,9 +361,11 @@ Base (no distillation) & 56.3 & 70 & 64 & 47.9 \\
 \end{table}
 
 \subsection{Qualitative Examples}\label{sec:examples}
-\emph{Example A, a clean win.} The base model's characteristic failure is to dump the categorical field values into the summary prose (``\ldots The sentiment is positive, with urgency as developing, frame as human\_interest\ldots'') instead of writing a summary. The tuned student instead writes a faithful, correctly structured summary that captures the article's thesis and independently corrects the \emph{urgency} label the base got wrong.
+\textbf{Summarization, a clean win.} The untuned base's characteristic failure is to spill the label values into the summary prose (``\ldots the sentiment is positive, urgency developing, frame human\_interest\ldots'') instead of writing a summary. The distilled student writes a faithful three-sentence summary that states the article's thesis and independently corrects an \emph{urgency} label the base got wrong. This is the modal difference behind the $+18.8$-point checklist gain over base.
 
-\emph{Example B, the faithfulness cost.} On a short article, the tuned student invents a framing---a subject's presidency described as an ``Obama-style conflict''---that appears nowhere in the source, whereas the teacher stays grounded. This is the residual faithfulness gap of Section~\ref{sec:faithful} in a single instance: a genuine fabrication, the thin-source failure mode isolated statistically, and the reason the routing table (Section~\ref{sec:assignment}) falls back to a more careful engine for faithfulness-critical prose.
+\textbf{Summarization, the thin-source failure.} On a short article the distilled student invents a framing absent from the source---a subject's presidency cast as an ``Obama-style conflict''---while the teacher stays grounded. This one instance is the short-source fabrication of Sections~\ref{sec:faithful} and \ref{sec:length}, and the reason the routing table falls back to the teacher on thin sources.
+
+\textbf{Classification, prompting beats fine-tuning on tone.} On \emph{tone} the distilled student collapses onto one or two labels (34\% accuracy), while the base model given 2--3 in-context examples recovers the distinction (75\%). The label is cued far better by a few demonstrations than by weights compiled from the teacher's outputs---the concrete reason \emph{tone} is routed to few-shot in the shipped configuration (Section~\ref{sec:design}).
 
 \section{Robustness Across Judges}\label{sec:robust}
 \emph{Per-judge robustness.} The three judges disagree on individual items, so magnitudes are panel-dependent, but every directional finding in Section~\ref{sec:results} holds under each judge alone: all three rank the tuned student above both non-distillation controls on the checklist, all three place the reasoning-teacher student far above the non-reasoning one, and all three rank \emph{tone}-label few-shot far above tuned. Only directional claims are made on judge-graded magnitudes; only human gold labels can settle the exact values (Section~\ref{sec:limits}). Notably, the judges disagree even on mechanically checkable predicates such as sentence count and opening phrase, confirming that rule-checkable checks are better computed by rule than judged; and any verbosity bias runs \emph{against} this study's conclusion, since the winning arm writes the shortest outputs.
@@ -440,7 +444,7 @@ Task framing & The single most consequential evaluation decision: real findings 
 Controls & Nearly free, and they changed the conclusion twice \\
 Judges & Grade against the full source or a truncation artifact masquerades as a regression \\
 Ship decision & The unit of measurement is the field; the unit of deployment is the minimal routing that pays \\
-Build vs.\ buy & A statistical tie on summaries; the recipes transfer different capabilities---choose per field \\
+Build vs.\ buy & The managed pipeline trails on summaries but leads on classification; the recipes transfer different capabilities---choose per field \\
 \bottomrule
 \end{tabular}
 \end{table}
