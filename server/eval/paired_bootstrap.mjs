@@ -9,7 +9,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
-const file = process.argv[2] || 'data/eval/scores_gemini_nemotron_n93.json';
+const file = process.argv[2] || 'data/eval/scores.json';
 const S = JSON.parse(readFileSync(join(ROOT, file), 'utf-8'));
 const CL = S.checklist;
 

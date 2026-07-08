@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from _style import apply_style, COLORS
 apply_style()
 
-S = json.load(open("data/eval/scores_gemini_nemotron_n93_fullctx_12arm.json"))
+S = json.load(open("data/eval/scores.json"))
 CL = S["checklist"]; CLS = S["classification"]["perArm"]
 mean = lambda xs: sum(xs) / len(xs)
 R1 = ["tuned_rss_tuned_s1", "tuned_rss_tuned_s2", "tuned_rss_tuned_s3"]

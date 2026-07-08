@@ -19,12 +19,15 @@ export function loadEnv() {
 }
 loadEnv();
 
+// Canonical panel: three independent families (Google / NVIDIA / Mistral), none
+// sharing the teacher's (DeepSeek-R1-Distill-Llama, Llama) or student's (Qwen) lineage.
+// A true 3-way majority. (Groq gpt-oss-120b + llama-3.1-8b were evaluated during panel
+// selection but excluded — free-tier instability; the phi4-mini local cross-check lives
+// in a separate scorecard.)
 export const JUDGES = [
-  { id: 'gpt-oss-120b',     provider: 'groq',   model: 'openai/gpt-oss-120b' },
-  { id: 'llama-3.1-8b',     provider: 'groq',   model: 'llama-3.1-8b-instant' },   // swapped from llama-3.3-70b (TPD exhausted); much higher daily token budget
   { id: 'gemini-flash-lite', provider: 'gemini', model: process.env.GEMINI_MODEL || 'gemini-flash-lite-latest' },
-  { id: 'nemotron-550b',    provider: 'nvidia', model: 'nvidia/nemotron-3-ultra-550b-a55b' },   // capable, credit-based (not TPD)
-  { id: 'mistral-small-119b', provider: 'nvidia', model: 'mistralai/mistral-small-4-119b-2603' }, // third family (Mistral, 119B, non-reasoning) via NVIDIA_API_KEY. Strong hosted third judge; large-3-675b was quota-throttled, phi4-mini kept as local cross-check.
+  { id: 'nemotron-550b',     provider: 'nvidia', model: 'nvidia/nemotron-3-ultra-550b-a55b' },
+  { id: 'mistral-small-119b', provider: 'nvidia', model: 'mistralai/mistral-small-4-119b-2603' },
 ];
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));

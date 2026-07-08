@@ -73,31 +73,5 @@ box(66, 4.5, 26, 6.5, "STATS\npaired bootstrap +\ngap-closure to teacher", fc="#
 plt.savefig("paper/figures/fig_study_at_a_glance.png", bbox_inches="tight", facecolor="white")
 plt.close()
 print("fig_study_at_a_glance.png written")
-
-# ── Figure 6: fresh 8-arm checklist comparison ──────────────────────────────
-d = json.load(open("data/eval/scores_gemini_nemotron_n93_fullctx_8arm.json"))
-ck = d["checklist"]
-seeds = ["tuned_rss_tuned_s1", "tuned_rss_tuned_s2", "tuned_rss_tuned_s3"]
-tuned_vals = [ck[s]["checklistPassRate"] for s in seeds]
-rows = [
-    ("Teacher (R1-8B)", ck["teacher"]["checklistPassRate"], ck["teacher"]["ci95"], "#2f5ba8"),
-    ("DIY tuned (3-seed mean)", sum(tuned_vals)/3, [min(tuned_vals), max(tuned_vals)], "#7b4fb5"),
-    ("Platform-distilled", ck["distil"]["checklistPassRate"], ck["distil"]["ci95"], "#c07a1f"),
-    ("Base + few-shot", ck["fewshot"]["checklistPassRate"], ck["fewshot"]["ci95"], "#8a929e"),
-    ("Base + constrained", ck["constrained"]["checklistPassRate"], ck["constrained"]["ci95"], "#8a929e"),
-    ("Base zero-shot", ck["base"]["checklistPassRate"], ck["base"]["ci95"], "#8a929e"),
-]
-fig, ax = plt.subplots(figsize=(10, 5.2), dpi=160)
-ys = range(len(rows))[::-1]
-for y, (label, v, ci, c) in zip(ys, rows):
-    ax.barh(y, v, color=c, alpha=0.85, height=0.62)
-    ax.errorbar(v, y, xerr=[[v - ci[0]], [ci[1] - v]], color="#2b2f36", capsize=4, lw=1.6)
-    ax.text(ci[1] + 1.2, y, f"{v:.1f}", va="center", fontsize=11, fontweight="bold")
-ax.set_yticks(list(ys)); ax.set_yticklabels([r[0] for r in rows], fontsize=11)
-ax.set_xlim(0, 100); ax.set_xlabel("Summary checklist pass-rate (%) — fresh 8-arm grading, N = 93", fontsize=11)
-ax.spines[["top", "right"]].set_visible(False)
-ax.set_title("Platform-distilled vs. DIY: a statistical tie on summary quality (Δ−3.6 [−8.5, +1.1])",
-             fontsize=12.5, fontweight="bold", pad=12)
-plt.tight_layout()
-plt.savefig("paper/figures/fig6_platform_checklist.png", bbox_inches="tight", facecolor="white")
-print("fig6_platform_checklist.png written")
+# (Figure 6 "platform vs DIY checklist" removed — the managed pipeline is now folded
+#  into the three-teacher comparison, Fig. fig7_teachers.)

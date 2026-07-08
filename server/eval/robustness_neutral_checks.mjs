@@ -13,7 +13,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
-const file = process.argv[2] || 'data/eval/checklist_detail_11arm.json';
+const file = process.argv[2] || 'data/eval/scores_detail.json';
 const D = JSON.parse(readFileSync(join(ROOT, file), 'utf-8'));
 
 const ALL = ['faithful', 'thesis', 'takeaway', 'length', 'opening', 'teacher', 'tech', 'tone'];
