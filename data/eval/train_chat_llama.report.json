@@ -1,0 +1,35 @@
+{
+  "model": "llama3.1:8b-instruct-q4_K_M",
+  "suffix": "llama",
+  "total": 401,
+  "ok": 396,
+  "bad": 5,
+  "yield": 98.8,
+  "failures": [
+    {
+      "idx": 166,
+      "reason": "no-json",
+      "head": "{\n  \"summary\": Meta's AI tools are being promoted through get-rich-quick ads that promise easy money by building and sel"
+    },
+    {
+      "idx": 192,
+      "reason": "no-json",
+      "head": "{\n  \"summary\": The Supreme Court ruled that the Fourth Amendment protects a user's location history, requiring the gover"
+    },
+    {
+      "idx": 215,
+      "reason": "no-json",
+      "head": "{\n  \"summary\": Sony is ending production of physical game discs for new PlayStation titles in January 2028, shifting foc"
+    },
+    {
+      "idx": 248,
+      "reason": "no-json",
+      "head": "{\n  \"summary\": The Trump Administration has signed deals with two energy companies to abandon their offshore wind projec"
+    },
+    {
+      "idx": 249,
+      "reason": "no-json",
+      "head": "{\n  \"summary\": The IAM union has accused Apple of discriminating against its represented workers by not offering them tr"
+    }
+  ]
+}
