@@ -42,26 +42,30 @@ const LIMITS = {
   __gemini:               { rpm: 12, tpm: 200000 }, // Gemini: RPM-bound
   'nvidia/nemotron-3-ultra-550b-a55b': { rpm: 35, tpm: 1e9 }, // NVIDIA: 40 RPM cap -> pace 35; credit-based, not token-paced
 };
-const win = {};   // model -> { reqs:[ts], toks:[{t,n}] }
 const estTokens = (system, user) => Math.ceil((system.length + user.length) / 4) + MAX_COMPLETION;
+// Concurrency-safe pacing. The critical section (read state + reserve the next slot)
+// runs synchronously with NO await, so N callers firing in parallel each get a distinct,
+// monotonic slot — the judge calls can safely run concurrently (score.mjs pmap) and the
+// gate still enforces the limit. RPM is enforced by slot reservation; TPM (which only
+// binds the excluded Groq models) is a best-effort rolling guard on scheduled tokens.
+const nextAt = {};   // model -> earliest ms at which the next request may start
+const tokWin = {};   // model -> [{t,n}] tokens scheduled in the rolling 60s window (TPM-bound models)
 async function gate(model, tokens) {
   const lim = LIMITS[model] || LIMITS.__gemini;
-  const s = (win[model] ||= { reqs: [], toks: [] });
-  for (let guard = 0; guard < 100; guard++) {
-    const now = Date.now(), cut = now - 60000;
-    s.reqs = s.reqs.filter(t => t > cut); s.toks = s.toks.filter(x => x.t > cut);
-    const usedTok = s.toks.reduce((a, x) => a + x.n, 0);
-    const minGap = 60000 / lim.rpm;
-    const sinceLast = now - (s.reqs[s.reqs.length - 1] || 0);
-    let wait = 0;
-    if (sinceLast < minGap) wait = minGap - sinceLast;                 // RPM
-    if (usedTok + tokens > lim.tpm && s.toks.length) {                 // TPM: wait for oldest to age out
-      wait = Math.max(wait, 60000 - (now - s.toks[0].t) + 250);
-    }
-    if (wait <= 0) break;
-    await sleep(wait);
+  const minGap = 60000 / lim.rpm;
+  // ---- critical section: no await until the slot is reserved (race-free across callers) ----
+  let start = Math.max(Date.now(), nextAt[model] || 0);
+  if (lim.tpm < 1e8) {                                    // TPM matters only for token-bound models
+    const tw = (tokWin[model] ||= []);
+    const prune = () => { while (tw.length && tw[0].t <= start - 60000) tw.shift(); };
+    prune();
+    while (tw.reduce((a, x) => a + x.n, 0) + tokens > lim.tpm && tw.length) { start = Math.max(start, tw[0].t + 60001); prune(); }
+    tw.push({ t: start, n: tokens });
   }
-  const t = Date.now(); s.reqs.push(t); s.toks.push({ t, n: tokens });
+  nextAt[model] = start + minGap;                          // reserve the slot (still synchronous)
+  // ---- end critical section ----
+  const wait = start - Date.now();
+  if (wait > 0) await sleep(wait);
 }
 
 async function callGroq(model, system, user, json) {
