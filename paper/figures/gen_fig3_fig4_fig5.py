@@ -10,12 +10,12 @@ from _style import apply_style, COLORS
 apply_style()
 
 # ---------- Fig 4: summary checklist pass-rate by arm (primary grading) ----------
-rows = [  # (label, value, ci_lo, ci_hi, color)
-    ("Teacher (R1-8B)",      84.8, 81.0, 88.0, COLORS["r1"]),
-    ("Tuned (distilled)",    72.5, 68.5, 76.3, COLORS["accent"]),
-    ("Base + few-shot",      66.7, 62.0, 71.2, COLORS["base"]),
-    ("Base + constrained",   57.0, 51.9, 61.8, COLORS["base"]),
-    ("Base zero-shot",       55.0, 49.5, 60.6, COLORS["base"]),
+rows = [  # (label, value, ci_lo, ci_hi, color) — canonical 3-judge grading
+    ("Teacher (R1-8B)",      88.6, 86.3, 91.5, COLORS["r1"]),
+    ("Tuned (distilled)",    75.1, 73.9, 76.5, COLORS["accent"]),
+    ("Base + few-shot",      70.2, 69.4, 71.0, COLORS["base"]),
+    ("Base + constrained",   58.2, 54.8, 60.9, COLORS["base"]),
+    ("Base zero-shot",       56.3, 53.6, 58.1, COLORS["base"]),
 ]
 fig, ax = plt.subplots(figsize=(7.2, 3.6))
 ys = list(range(len(rows)))[::-1]
@@ -32,15 +32,15 @@ print("fig4_checklist.png")
 
 # ---------- Fig 3: per-axis gap-closure toward the teacher ----------
 # (base, tuned, teacher) per axis; gap-closure = (tuned-base)/(teacher-base)*100
-data = [
-    ("takeaway",     44.1, 74.2, 89.2), ("topics_cover", 87.1, 95.7, 98.9),
-    ("tech-lens",    36.6, 54.5, 63.4), ("teacher-lens", 22.6, 62.0, 87.1),
-    ("tone (summ.)", 59.1, 82.8, 92.5), ("thesis",       84.9, 94.2, 97.8),
-    ("opening",      51.6, 77.8, 73.1), ("faithful",     79.6, 75.6, 93.5),
-    ("length",       61.3, 59.1, 81.7),
-    ("urgency",      62.8, 78.5, 57.0), ("frame",        50.0, 58.1, 66.7),
-    ("sentiment",    43.0, 66.0, 80.6), ("depth",        43.0, 48.8, 53.8),
-    ("tone (label)", 24.4, 29.0, 78.5),
+data = [  # (name, base, tuned, teacher) — canonical 3-judge grading
+    ("takeaway",     37.6, 68.5, 89.2), ("topics_cover", 78.5, 82.8, 96.8),
+    ("tech-lens",    33.3, 48.4, 57.0), ("teacher-lens", 21.5, 50.2, 76.3),
+    ("tone (summ.)", 57.0, 79.2, 94.6), ("thesis",       80.6, 87.1, 97.8),
+    ("opening",      80.6, 98.2, 100.0), ("faithful",    69.9, 73.1, 95.7),
+    ("length",       69.9, 95.7, 97.8),
+    ("urgency",      55.8, 72.4, 67.7), ("frame",        51.2, 58.4, 63.4),
+    ("sentiment",    48.8, 69.2, 81.7), ("depth",        51.2, 42.7, 48.4),
+    ("tone (label)", 32.6, 34.1, 77.4),
 ]
 labels, gcs, colors, notes = [], [], [], []
 for name, b, t, te in data:
