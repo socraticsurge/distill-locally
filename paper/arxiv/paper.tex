@@ -223,6 +223,33 @@ topics\_cover & 78.5 & 81.7 & 82.8 & 96.8 & $+4.3$ \\
 \subsection{The Faithfulness Gap}\label{sec:faithful}
 Under the canonical full-source grading, aggregate faithfulness is base 69.9, tuned 73.1, teacher 95.7: the tuned student sits at or slightly above base, so the aggregate ``faithfulness regression'' that coarser gradings suggest does not survive here. What is robust is a subgroup effect tied to article length. On long articles ($>1200$ chars, $n=71$) the tuned student is above base (78.6 versus 71.9); on short articles ($\leq1200$, $n=22$) it drops below (55.0 versus 64.0). The mechanism is thin source: given little article to ground in, the reasoning-teacher student fills the summary with specific-sounding but unsupported claims (Example~B, Section~\ref{sec:examples}); on rich source material it stays grounded. This is a property of the teacher's lineage, not of small models in general---the same-size non-reasoning teacher's students stay faithful on exactly these short articles (74.2, Section~\ref{sec:platform}). The short-source magnitude is grading-sensitive (Section~\ref{sec:robust}) and rests on 22 articles, so it is read as a direction---the reasoning lineage fabricates on thin sources---not a fixed number. For a user-facing pipeline that cannot tolerate fabrication, even a localized dip is worth routing around (Section~\ref{sec:assignment}).
 
+\subsection{Article Length: Thin Sources Are Hard for the Student}\label{sec:length}
+The faithfulness dip on short articles is one facet of a broader effect: the 0.6B student degrades on thin sources across nearly every summary axis, while the teacher barely moves. Splitting the 93 test articles at 1200 characters (Table~\ref{tab:length}), the tuned student's overall checklist falls from 78 on long articles to 66 on short ($-12$), whereas the teacher falls only 89 to 86 ($-3$) and the untuned base is flat (57 to 55). The drop is not confined to faithfulness: the teacher-lens ($-34$), faithfulness ($-24$), tone ($-15$), and takeaway ($-12$) checks all fall sharply on short inputs, while the format checks (length, opening) and thesis capture hold. The mechanism is direct---given little source to work from, a small student cannot ground, expand, or adopt the teacher's voice, and it substitutes fabrication and generic phrasing; a larger teacher does not need the material. Article length, not model choice alone, gates deployment: the routing table (Section~\ref{sec:routing}) sends thin sources to the teacher precisely because that is where the student's recovery collapses.
+
+\begin{table}[t]
+\centering
+\caption{Tuned Student: Summary Checks by Article Length ($N=93$)}
+\label{tab:length}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Check & Short ($\leq$1200, $n$=22) & Long ($>$1200, $n$=71) & Drop \\
+\midrule
+teacher-lens & 24 & 58 & $-34$ \\
+faithful & 55 & 79 & $-24$ \\
+tone & 68 & 83 & $-15$ \\
+takeaway & 59 & 71 & $-12$ \\
+tech-lens & 42 & 50 & $-8$ \\
+opening & 97 & 99 & $-2$ \\
+length & 94 & 96 & $-2$ \\
+thesis & 91 & 86 & $+5$ \\
+\midrule
+\emph{overall (tuned)} & \emph{66} & \emph{78} & \emph{$-12$} \\
+\emph{overall (teacher)} & \emph{86} & \emph{89} & \emph{$-3$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Three Teachers, One Recipe: What the Student Inherits}\label{sec:reasoning}
 The title's ``reasoning teacher'' is a claim, not a given; the cheapest rival explanation for the summary win is a merely capable 8B teacher. To settle it, the same Qwen3-0.6B base is distilled by the identical QLoRA recipe, seeds, and split from three teachers, so that what the student inherits is attributable to the teacher and not the procedure. The reasoning teacher is DeepSeek-R1-Distill-Llama-8B; the same-size non-reasoning teacher is Llama-3.1-8B-Instruct, which re-labeled the 401 training articles under the identical prompt at temperature 0, yielding usable JSON on 396; the third teacher is a managed pipeline running a larger model, \texttt{gpt-oss-120b}, with proprietary synthetic-data expansion. The two 8B teachers differ only in reasoning nature and isolate it; the managed pipeline additionally varies scale and adds synthetic data, and is treated separately (Section~\ref{sec:platform}). Each 8B teacher's own outputs on the test set are graded as an arm, so a teacher sits beside its students under one rubric (Fig.~\ref{fig:reasoning}); all twelve arms were re-graded together and prior aggregates reproduce within {\raise.17ex\hbox{$\scriptstyle\sim$}}2 points.
 
@@ -286,7 +313,7 @@ Tuned (distilled) & 774 & 1341 & 165 \\
 \end{figure}
 
 \subsection{Seed Variance}\label{sec:seeds}
-The three seeds diverge sharply on the hardest axis: \emph{tone}-label accuracy ranged 8.6\% to 46.2\% across seeds, and classification macro ranged 50.3 to 66.5. A single-seed study could have reported any point in that range as ``the'' result; at 0.6B, seed choice is first-order on the subjective fields, not a rounding error, which is why tuned values are reported as three-seed means. Seed disagreement is also a free confidence signal (Table~\ref{tab:seeds}): where the three seeds agree unanimously, accuracy is 18--43 points higher than where they split, and \emph{tone}, the field distillation fails, is precisely where the seeds almost never agree. Since the three seeds together still run in {\raise.17ex\hbox{$\scriptstyle\sim$}}2.4 s/article, seed-ensemble agreement is a zero-training-cost per-item confidence flag: trust unanimous labels, route split items to a fallback engine (Section~\ref{sec:assignment}).
+The three seeds diverge sharply on the hardest axis: \emph{tone}-label accuracy ranges 11.8\% to 58.1\% across seeds, and classification macro from 46.9 to 64.5. A single-seed study could have reported any point in that range as ``the'' result; at 0.6B, seed choice is first-order on the subjective fields, not a rounding error, which is why tuned values are three-seed means. Seed agreement is also a near-free confidence signal (Table~\ref{tab:seeds}): on four of the five fields, unanimous predictions are markedly more accurate than split ones---by up to 27 points on \emph{sentiment} and \emph{urgency}---and \emph{tone}, the field distillation fails, is where the seeds almost never agree (unanimous on 12 of 93). The exception is \emph{depth}, where unanimity does not help: the seeds agree confidently on a wrong majority label, consistent with \emph{depth} sitting below its majority-class baseline. Since the three seeds together still run in {\raise.17ex\hbox{$\scriptstyle\sim$}}2.4 s/article, seed-ensemble agreement is a per-item confidence flag at nearly no cost: trust unanimous labels, route split items to a fallback (Section~\ref{sec:assignment}).
 
 \begin{table}[t]
 \centering
@@ -297,11 +324,11 @@ The three seeds diverge sharply on the hardest axis: \emph{tone}-label accuracy 
 \toprule
 Field & Unanimous (3/3) & Acc. & Split & Acc. \\
 \midrule
-urgency & 83 & 83.1 & 10 & 40.0 \\
-sentiment & 67 & 73.1 & 26 & 47.4 \\
-frame & 57 & 64.9 & 36 & 47.2 \\
-depth & 36 & 61.1 & 57 & 40.9 \\
-tone & 12 & 50.0 & 81 & 25.9 \\
+urgency & 83 & 75.9 & 10 & 50.0 \\
+sentiment & 67 & 77.6 & 26 & 50.0 \\
+frame & 57 & 66.7 & 36 & 61.1 \\
+depth & 36 & 44.4 & 57 & 52.6 \\
+tone & 12 & 58.3 & 81 & 43.2 \\
 \bottomrule
 \end{tabular}
 \end{table}
