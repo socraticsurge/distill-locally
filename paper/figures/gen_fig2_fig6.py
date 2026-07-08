@@ -34,7 +34,7 @@ def step(n, y):
 ax.text(50, 102.5, "Study at a glance:  distilling into a 0.6B on-device student — two training pipelines",
         ha="center", va="center", fontsize=19, fontweight="bold")
 
-step(1, 96);  box(12, 93, 76, 6, "500 news articles  ·  sampled across all Atlas Pulse RSS feeds", fs=14, bold_first=True)
+step(1, 96);  box(12, 93, 76, 6, "500 news articles  ·  sampled across all subscribed RSS feeds", fs=14, bold_first=True)
 arrow(50, 92.4, 50, 89.2)
 step(2, 85);  box(12, 81.5, 76, 7, "TEACHER  —  DeepSeek-R1 8B  (reasoning model, runs on-device)\nlabels every article → one gold JSON  ·  ~39 s / article", fc="#dbe5f4", ec="#2f5ba8")
 arrow(50, 80.9, 50, 77.7)
@@ -46,7 +46,7 @@ box(54, 60.5, 36, 6, "93 held-out test articles")
 step(4, 51)
 arrow(22, 59.9, 15.5, 55.2, color="#7b4fb5"); arrow(36, 59.9, 42.5, 55.2, color="#c07a1f")
 box(5, 45.5, 21.5, 9, "TRAIN (DIY)  —  QLoRA\nQwen3-0.6B · 3 seeds\n(Unsloth, free Colab T4)\nteacher outputs, verbatim", fc="#e9dff3", ec="#7b4fb5", fs=11.5)
-box(30.5, 45.5, 24, 9, "TRAIN (PLATFORM)  —  Distil Labs\nmanaged pipeline · single run\nteacher gpt-oss-120b → synthetic\nexpansion (Amendment 2)", fc="#f7e8d4", ec="#c07a1f", fs=11.5, dashed=True)
+box(30.5, 45.5, 24, 9, "TRAIN (PLATFORM)  —  managed service\nsingle run\nteacher gpt-oss-120b → synthetic\ndata expansion", fc="#f7e8d4", ec="#c07a1f", fs=11.5, dashed=True)
 arrow(15.5, 44.9, 32, 38.0, color="#7b4fb5")
 arrow(42.5, 44.9, 46, 38.0, color="#c07a1f", dashed=True)
 arrow(72, 59.9, 72, 38.0)
