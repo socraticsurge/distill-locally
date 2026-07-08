@@ -1,86 +1,84 @@
-# Distill Locally — DeepSeek-R1:8b → Qwen3-0.6B
+# Different Teachers, Different Capabilities — Sub-1B On-Device Distillation
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Pre-specified](https://img.shields.io/badge/design-pre--specified%2C%20frozen%20before%20scoring-1a3c6e)
-![Reproducible](https://img.shields.io/badge/reproduces-offline%2C%20no%20API%20keys-1a3c6e)
+![Reproducible](https://img.shields.io/badge/analysis-reproduces%20offline%20from%20the%20scorecard-1a3c6e)
 ![Local](https://img.shields.io/badge/stack-Ollama%20%2B%20Unsloth-8A2BE2)
 
-A local knowledge-distillation study: can an 8B reasoning teacher (`deepseek-r1:8b`) be distilled into a 600M student (`Qwen3-0.6B`) for a structured RSS-article-summarization task — a JSON object with a free-text summary, five categorical fields, and open-set topics — and *what specifically* does the distillation buy? Evaluated with a pre-specified (frozen-before-scoring), control-anchored, multi-judge protocol — and extended, under a dated amendment, with a managed-platform distillation arm (Distil Labs) as a system-level comparison.
+Can an 8B **reasoning** teacher (`deepseek-r1:8b`) be distilled into a 0.6B student (`Qwen3-0.6B`) for a structured text-enrichment task — one JSON object per article with a free-text summary, five categorical labels, and open-set topics — and *what specifically* does the distillation transfer? The study answers per sub-task, with a pre-specified (frozen-before-scoring), control-anchored, three-judge protocol, and settles the central question with a **same-size non-reasoning-teacher control**: an equal-size instruction teacher (`llama-3.1-8b-instruct`) trained under the identical recipe, plus a larger managed pipeline (`gpt-oss-120b` + synthetic-data expansion) as a systems comparison.
 
-This repository was extracted from the "Atlas Pulse" RSS reader app so the study can live, version, and be reviewed on its own.
+*The task was originally drawn from an RSS-reader side project; the repository is the study, standing on its own.*
 
-![Study design: 500 articles, teacher labeling, stratified split, two training pipelines, eight arms, three scored sub-tasks, two-judge panel](paper/figures/fig_study_at_a_glance.png)
+![Experimental pipeline: 494 labeled articles split 401/93; three teachers (reasoning 8B, same-size non-reasoning 8B, managed 120B pipeline) distill the same Qwen3-0.6B base; twelve arms scored on two sub-tasks by a blinded three-judge panel against the full article](paper/figures/fig2_pipeline.png)
 
 ## Start here
-- **The paper:** [`paper/distillation_paper.md`](paper/distillation_paper.md) — or the rendered arXiv-style [`paper/distillation_paper.pdf`](paper/distillation_paper.pdf) (with figures).
+- **The paper:** [`paper/arxiv/paper.pdf`](paper/arxiv/paper.pdf) (12 pp, IEEEtran) — source [`paper/arxiv/paper.tex`](paper/arxiv/paper.tex).
 - **Reviewer's map (every claim → the file that backs it):** [`paper/REVIEW_MANIFEST.md`](paper/REVIEW_MANIFEST.md)
 - **Frozen analysis plan + dated amendments:** [`paper/PREREGISTRATION.md`](paper/PREREGISTRATION.md) · full design: [`paper/evaluation_design.md`](paper/evaluation_design.md)
-- **What actually ships (measurement vs. solution design):** paper §8.2 — two engines and one rule.
-- **Practitioner lessons (the decision surface — teacher/student choice, quantization, tuning recipe, data size, controls, judging):** paper §9.1.
-- **Citing this work:** see [`CITATION.cff`](CITATION.cff).
+- **Browse it yourself:** open [`data/eval/viewer.html`](data/eval/viewer.html) locally — every arm's generation, the panel grades per check, the scorecard, and the analytics, in one offline page.
+- **Citing this work:** [`CITATION.cff`](CITATION.cff).
 
 ## Headline findings
-All numbers are from **full-text judge grading** (the judge sees the whole article; N = 93, eight arms).
+Canonical grading is **full-text** (the judge sees the whole article) by a **three-judge panel** (Gemini Flash Lite · Nemotron-550B · Mistral-Small-119B), reference-free, blinded, majority vote; **N = 93** held-out articles, **twelve arms**, three training seeds. Significance is paired-bootstrap (20 000 resamples).
 
-- **Summary quality:** DIY distillation significantly beats the formatting control (+15.5 pts checklist, p<0.001) **and** few-shot prompting (+5.9, p<0.001), closing ~59% of the base→teacher gap. The soft spot is faithfulness on short-source articles — a localized fabrication mode (§6.2.1).
-- **Classification, honestly:** the tuned student tops every arm — including its own teacher — on `urgency` agreement, but the promised per-class confusion analysis **demotes that headline**: most of the margin is majority-class alignment, +4.3 points over a constant guess (§6.3). The macro ties few-shot.
-- **The routing table, scored as a system (§8.1):** the paper's own short-source advice did not survive its own measurement — prompting fallbacks barely restore faithfulness; only a teacher fallback does (+6.1 checklist, paired [3.1, 9.2], at ~82 min per 500 articles).
-- **A managed-platform arm (Amendment 2, §6.8):** the same 401 training articles through Distil Labs (its own 120B teacher, synthetic-data expansion) **ties** the DIY QLoRA on summary quality (Δ−3.6 [−8.5, +1.1]) while producing the **best small-model classifier** and the **worst thin-source faithfulness** (36.4%) — the two training recipes transfer different capabilities.
-- **What ships (§8.2):** measure every field; ship only the routing that pays — for this product, two engines and one rule.
+- **Speed:** the 0.6B student runs at **~0.8 s/article** vs the teacher's **~39 s** — a 500-item batch collapses from **5.4 h to ~7 min** on a laptop.
+- **Summary quality:** the tuned student scores **75.1** on the checklist — beating its pre-registered primary baseline (constrained decoding) by **+16.8** `[11.4, 22.5]`, p<0.001, and few-shot prompting by a secondary **+4.9** `[1.6, 8.2]` — closing **58%** of the base→teacher gap.
+- **It's the teacher's *reasoning nature*, not its scale (the control that anchors the title):** a same-size **non-reasoning** teacher, distilled by the identical recipe, trains a student **no better than the untuned base** (+0.6 `[−5.2, 6.4]`, n.s.), while the reasoning-teacher student beats base by **+18.7** `[13.1, 24.4]`. Reasoning-vs-instruction student gap: **+18.1** `[14.4, 22.0]`, p<0.001, across all three seed pairs.
+- **Different teachers transfer different capabilities:** reasoning → **writing quality**; scale + synthetic data → **label diversity** (the managed pipeline is the best small-model classifier, macro 66.3, and the only arm above the `depth` majority baseline); the same-size instruction teacher → **thin-source grounding** (its students hold 74% faithful on the 22 short articles where the reasoning students fall to 55% and the managed student collapses to 36%). *This last effect is a consistent ordering, not a significant aggregate difference (n = 22) — reported as a direction.*
+- **Classification, honestly:** fine-tuning does **not** beat prompting on macro accuracy (55.3 vs 58.5); the `urgency` "win" is mostly majority-class alignment; `depth` sits below its majority baseline for every small-model arm; `tone` is cued far better by a few examples than baked into weights.
+- **Routing, scored as a system (§8):** send only the 22 short articles to a larger engine — to the **R1 teacher** (Router B, +4.6 checklist, ~82 min/500) for writing quality, or to the **Llama-8B teacher** (Router B′, the highest faithfulness of any bulk-on-device config, 82.8, at ~14 min/500) for grounding. Per-field classification routing reaches macro 76.1 — labeled as an **oracle upper bound**, not a held-out result.
 
-The paper contains three self-corrections found by its own instruments (§8.1, §6.3, and the §7 prompt-composition check) — which is the point. See §6–§9.
+The paper argues against its own convenience in several places (the `urgency` demotion, the thin-source caveat, and the full-source-grading fix that removed a spurious faithfulness "regression") — which is the point.
 
-## Reproduce the results (offline, no API keys)
-Core analysis uses only Node built-ins — no `npm install` required. Full-text grading (`ARTICLE_CHARS=100000`) is canonical throughout the paper.
+## Reproduce (offline, no API keys)
+Every reported metric recomputes from the **committed scorecard** (`data/eval/scores.json`, `data/eval/scores_detail.json`) using only Node built-ins — no `npm install`, no keys.
 ```bash
-# Canonical full-text 2-judge (Gemini + Nemotron) scorecard, recomputed from the judge cache:
-ARTICLE_CHARS=100000 JUDGES_EXCLUDE=gpt-oss-120b,llama-3.1-8b node server/eval/compile.mjs
-#   -> data/eval/scores.json  (== data/eval/scores_gemini_nemotron_n93_fullctx.json)
+# Primary summary win (tuned vs constrained / few-shot), paired bootstrap:
+node server/eval/paired_bootstrap.mjs
 
-# Pre-specified paired-bootstrap significance test (on the full-text scorecard):
-node server/eval/paired_bootstrap.mjs data/eval/scores_gemini_nemotron_n93_fullctx.json
+# The reasoning-teacher control (R1-distilled vs Llama-distilled vs base):
+node server/eval/paired_bootstrap_reasoning.mjs
 
-# Per-judge robustness (paper §7) — each judge alone:
-ARTICLE_CHARS=100000 JUDGES_ONLY=gemini node server/eval/compile.mjs
-ARTICLE_CHARS=100000 JUDGES_ONLY=nvidia node server/eval/compile.mjs
+# Teacher-neutral robustness cut (faithful/thesis/takeaway only):
+node server/eval/robustness_neutral_checks.mjs
 
-# Fresh 8-arm scorecard incl. the platform arm (Amendment 2) + drift check vs the file above:
-#   -> data/eval/scores_gemini_nemotron_n93_fullctx_8arm.json (committed)
+# Routing table scored as a system, incl. Router B′ (short → Llama-8B teacher):
+node server/eval/router_bprime.mjs
 
-# The routing table scored as a system (paper §8.1):
-node server/eval/router_composite.mjs
-
-# Item-level analyses — urgency confusion, seed-agreement signal, judge-noise
-# decomposition, truncation flips (paper §6.3 / §6.6 / §7):
-ARTICLE_CHARS=100000 JUDGES_EXCLUDE=gpt-oss-120b,llama-3.1-8b DETAIL_DUMP=1 node server/eval/compile.mjs
-ARTICLE_CHARS=1200   JUDGES_EXCLUDE=gpt-oss-120b,llama-3.1-8b DETAIL_DUMP=1 node server/eval/compile.mjs
-node server/eval/detail_analyses.mjs
-
-# Regenerate Figure 2 (pipeline diagram) and Figure 6 (8-arm checklist):
-python3 paper/figures/gen_fig2_fig6.py
-
-# Rebuild the paper PDF (needs Python with markdown + weasyprint):
-DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib python3 paper/build_pdf.py
+# Local inspector: generations + panel grades + scorecard + analytics -> data/eval/viewer.html
+node server/eval/build_viewer.mjs && node server/eval/build_viewer_html.mjs
 ```
-`compile.mjs` only reads `data/eval/judge_cache.jsonl`; it never calls an API. **API keys (`.env`) are needed only to *regenerate* the cache** (`server/eval/score.mjs`, `gen_arms.mjs`), which a reviewer does not need to do. Figures 2 and 6 regenerate from data (`paper/figures/gen_fig2_fig6.py`); the remaining figures are author-provided PNGs in `paper/figures/`.
+Regenerating the figures needs Python with matplotlib (Times New Roman for the paper font):
+```bash
+python3 paper/figures/gen_fig2.py            # pipeline diagram
+python3 paper/figures/gen_fig3_fig4_fig5.py  # gap-closure, checklist, efficiency
+python3 paper/figures/gen_fig7.py            # three-teacher comparison
+```
+**Regenerating the judge grades from scratch** (`server/eval/score.mjs`) is the only step that needs API keys (`--env-file=.env`); reproducing the reported metrics from the committed scorecard does not.
 
 ## Layout
 ```
-paper/            the paper, review manifest, pre-registration, design, pipeline diagram
-server/eval/      analysis engine (compile.mjs), judge panel + clients (judges.mjs),
-                  significance (paired_bootstrap.mjs), router scoring (router_composite.mjs),
-                  item-level analyses (detail_analyses.mjs), cache/arm generators (score.mjs, gen_arms.mjs)
-data/eval/        test/train sets, per-arm outputs (incl. arm_distil.jsonl), judge cache, scorecards, split,
-                  and system_prompt.txt (the generation prompt)
-notebooks/        Unsloth QLoRA training notebook (3 seeds)
+paper/arxiv/      the paper (paper.tex + paper.pdf), arXiv submission package (ARXIV_UPDATE.md,
+                  arxiv_submission.tar.gz, arxiv_abstract.txt)
+paper/            REVIEW_MANIFEST.md, PREREGISTRATION.md, evaluation_design.md
+paper/figures/    figure generators (gen_fig*.py) + rendered PNGs (Times New Roman + STIX)
+server/eval/      scoring engine (score.mjs), judge panel + clients (judges.mjs),
+                  significance (paired_bootstrap*.mjs), routing (router_bprime.mjs),
+                  robustness (robustness_neutral_checks.mjs), item-level analyses (detail_analyses.mjs),
+                  local inspector builders (build_viewer*.mjs), teacher/arm generators
+data/eval/        test/train sets, per-arm outputs (arm_*.jsonl), judge cache, canonical scorecards
+                  (scores.json, scores_detail.json), split, system_prompt.txt, viewer.html
+notebooks/        Unsloth QLoRA training notebooks (3 seeds; R1 and Llama teachers)
 models/           trained GGUFs (~1.5 GB, git-ignored — regenerate via notebooks/)
 ```
 
 ## Toolchain (all open source)
-Teacher & student inference: **Ollama**. Fine-tuning: **Unsloth** QLoRA on a free Colab T4. Models: **Qwen3-0.6B** and **DeepSeek-R1:8b** (open weights). Judges: **Gemini Flash Lite** (Google AI Studio) and **Nemotron** (NVIDIA NIM), reference-free. The core study uses no proprietary training platform; the Amendment 2 comparison arm was trained on the **Distil Labs** managed pipeline, and its outputs and scores are in-repo.
+Inference: **Ollama**. Fine-tuning: **Unsloth** QLoRA on a free Colab T4. Models: **Qwen3-0.6B**, **DeepSeek-R1:8b**, **Llama-3.1-8B-Instruct** (open weights). Judges (reference-free, hosted): **Gemini Flash Lite** (Google AI Studio), **Nemotron-550B** and **Mistral-Small-119B** (NVIDIA NIM). The core study uses no proprietary training platform; the managed-pipeline comparison arm was trained on **Distil Labs** (`gpt-oss-120b`), and its outputs and scores are in-repo.
 
 ## Notes
-- **`models/` is git-ignored** (1.5 GB of GGUF binaries). Regenerate from `notebooks/unsloth_qwen3_0_6b_3seeds.ipynb`.
-- **`.env` is git-ignored** and holds judge API keys (Groq / Google AI Studio / NVIDIA NIM). Only needed to regenerate the judge cache; reproducing the reported metrics needs no keys.
-- **Do not reimplement `keyOf`** in `server/eval/judges.mjs` — the cache key is byte-sensitive; a retyped copy silently misses the cache 100%. Extend `compile.mjs` in place instead.
-- The datasets in `data/eval/` are provided pre-built; the raw data-generation/sampling scripts are not part of this repo (the reported results reproduce from `server/eval/` + `data/eval/` alone).
+- **Tag `arxiv-v1-submitted`** pins the exact source submitted to arXiv v1; `main` carries the current revision.
+- **`.env` is git-ignored** (judge API keys). Needed only to regenerate the judge cache; reproducing the reported metrics needs no keys.
+- **`models/` is git-ignored** (1.5 GB of GGUFs) — regenerate from `notebooks/`.
+- **Do not reimplement `keyOf`** in `server/eval/judges.mjs` — the cache key is byte-sensitive; a retyped copy silently misses the cache. Extend the scorer in place.
+- **The judge cache is a speed cache, not the record.** Panel-**majority** grades are frozen in `scores_detail.json`; individual per-judge votes are not persisted (see the local inspector's Analytics note). A future revision should log raw per-judge grades with provenance.
+- The datasets in `data/eval/` are provided pre-built; the reported results reproduce from `server/eval/` + `data/eval/` alone.
