@@ -24,6 +24,7 @@ export const JUDGES = [
   { id: 'llama-3.1-8b',     provider: 'groq',   model: 'llama-3.1-8b-instant' },   // swapped from llama-3.3-70b (TPD exhausted); much higher daily token budget
   { id: 'gemini-flash-lite', provider: 'gemini', model: process.env.GEMINI_MODEL || 'gemini-flash-lite-latest' },
   { id: 'nemotron-550b',    provider: 'nvidia', model: 'nvidia/nemotron-3-ultra-550b-a55b' },   // capable, credit-based (not TPD)
+  { id: 'mistral-small-119b', provider: 'nvidia', model: 'mistralai/mistral-small-4-119b-2603' }, // third family (Mistral, 119B, non-reasoning) via NVIDIA_API_KEY. Strong hosted third judge; large-3-675b was quota-throttled, phi4-mini kept as local cross-check.
 ];
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -41,6 +42,8 @@ const LIMITS = {
   'llama-3.1-8b-instant': { rpm: 25, tpm: 5500 },   // high TPD; TPM-paced
   __gemini:               { rpm: 12, tpm: 200000 }, // Gemini: RPM-bound
   'nvidia/nemotron-3-ultra-550b-a55b': { rpm: 35, tpm: 1e9 }, // NVIDIA: 40 RPM cap -> pace 35; credit-based, not token-paced
+  'phi4-mini:3.8b': { rpm: 600, tpm: 1e9 }, // local Ollama: effectively unthrottled
+  'mistralai/mistral-small-4-119b-2603': { rpm: 30, tpm: 1e9 }, // NVIDIA integrate; pace under the ~40 rpm account cap, no bursting
 };
 const estTokens = (system, user) => Math.ceil((system.length + user.length) / 4) + MAX_COMPLETION;
 // Concurrency-safe pacing. The critical section (read state + reserve the next slot)
@@ -107,16 +110,41 @@ async function callGemini(model, system, user, json) {
 
 // NVIDIA NIM (integrate.api.nvidia.com) — OpenAI-compatible. enable_thinking:false for
 // fast, clean JSON (probe: ~1s, no reasoning leak). Credit-based (no TPD), 40 RPM.
-async function callNvidia(model, system, user) {
-  const key = process.env.NVIDIA_API_KEY;
-  if (!key) throw new Error('NVIDIA_API_KEY missing in .env');
+async function callNvidia(judge, system, user) {
+  const key = process.env[judge.keyEnv || 'NVIDIA_API_KEY'];
+  if (!key) throw new Error(`${judge.keyEnv || 'NVIDIA_API_KEY'} missing in .env`);
   const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model, temperature: 0, max_tokens: MAX_COMPLETION,
-      chat_template_kwargs: { enable_thinking: false },
+    body: JSON.stringify({ model: judge.model, temperature: 0, max_tokens: MAX_COMPLETION,
+      // enable_thinking:false silences Nemotron's reasoning; Mistral tokenizers reject chat_template_kwargs, so send it only where needed
+      ...(judge.model.includes('nemotron') ? { chat_template_kwargs: { enable_thinking: false } } : {}),
       messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
   });
   if (!res.ok) { const e = new Error(`nvidia ${res.status}: ${(await res.text()).slice(0, 200)}`); e.status = res.status; throw e; }
+  return (await res.json()).choices[0].message.content;
+}
+
+// Local Ollama judge (no key). num_ctx raised so the batched checklist prompt isn't truncated.
+async function callOllama(judge, system, user) {
+  const res = await fetch('http://localhost:11434/api/chat', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: judge.model, stream: false, think: false, options: { temperature: 0, num_ctx: 16384 },
+      messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
+  });
+  if (!res.ok) { const e = new Error(`ollama ${res.status}: ${(await res.text()).slice(0, 160)}`); e.status = res.status; throw e; }
+  return (await res.json()).message?.content || '';
+}
+
+// Cerebras (api.cerebras.ai) — OpenAI-compatible, fast. 8192-ctx models; own key.
+async function callCerebras(judge, system, user) {
+  const key = process.env[judge.keyEnv || 'CEREBRAS_API_KEY'];
+  if (!key) throw new Error(`${judge.keyEnv || 'CEREBRAS_API_KEY'} missing in .env`);
+  const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ model: judge.model, temperature: 0, max_tokens: MAX_COMPLETION,
+      messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
+  });
+  if (!res.ok) { const e = new Error(`cerebras ${res.status}: ${(await res.text()).slice(0, 200)}`); e.status = res.status; throw e; }
   return (await res.json()).choices[0].message.content;
 }
 
@@ -127,7 +155,9 @@ export async function callJudge(judge, { system, user, json = false }, { retries
     try {
       await gate(judge.provider === 'gemini' ? '__gemini' : judge.model, estTokens(system, user));
       const raw = judge.provider === 'groq' ? await callGroq(judge.model, system, user, json)
-        : judge.provider === 'nvidia' ? await callNvidia(judge.model, system, user)
+        : judge.provider === 'nvidia' ? await callNvidia(judge, system, user)
+        : judge.provider === 'cerebras' ? await callCerebras(judge, system, user)
+        : judge.provider === 'ollama' ? await callOllama(judge, system, user)
         : await callGemini(judge.model, system, user, json);
       if (!json) return raw;
       const t = raw.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '');
