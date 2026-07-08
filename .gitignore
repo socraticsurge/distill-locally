@@ -18,3 +18,9 @@ data/eval/scores_fullctx_class.json
 
 # regenerable per-item detail dumps (see REVIEW_MANIFEST)
 data/eval/detail_dump_*.json
+
+# regenerable viewer intermediate (viewer.html embeds this; rebuild via server/eval/build_viewer.mjs)
+data/eval/viewer_data.json
+
+# unpacked arXiv staging dir (regenerable; the committed tarball is the artifact)
+paper/arxiv/arxiv_upload/
