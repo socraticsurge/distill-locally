@@ -2,10 +2,13 @@
 """Regenerate fig_study_at_a_glance.png (v2: platform branch, eight arms) and
 fig6_platform_checklist.png (fresh 8-arm checklist comparison) from the canonical
 8-arm scorecard. Run from repo root: python3 paper/figures/gen_fig2_fig6.py"""
-import json
+import json, sys, os
 import matplotlib.pyplot as plt
 import matplotlib.patches as mp
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+sys.path.insert(0, os.path.dirname(__file__))
+from _style import apply_style
+apply_style()
 
 # ── Figure 2: study at a glance, v2 ─────────────────────────────────────────
 fig, ax = plt.subplots(figsize=(16, 11.6), dpi=133)
