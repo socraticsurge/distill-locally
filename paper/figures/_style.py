@@ -17,8 +17,8 @@ COLORS = {
 def apply_style():
     mpl.rcParams.update({
         "font.family": "serif",
-        "font.serif": ["Times New Roman", "Times", "Nimbus Roman", "DejaVu Serif"],
-        "mathtext.fontset": "cm",
+        "font.serif": ["Times New Roman", "Times", "Nimbus Roman", "STIXGeneral", "DejaVu Serif"],
+        "mathtext.fontset": "stix",   # Times-compatible math, to match the IEEEtran (Times) body
         "font.size": 11,
         "axes.titlesize": 12,
         "axes.labelsize": 11,
