@@ -24,3 +24,7 @@ data/eval/viewer_data.json
 
 # unpacked arXiv staging dir (regenerable; the committed tarball is the artifact)
 paper/arxiv/arxiv_upload/
+
+# python bytecode
+__pycache__/
+*.pyc
